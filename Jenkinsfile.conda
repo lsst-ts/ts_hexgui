@@ -1,0 +1,2 @@
+@Library('JenkinsShared')_
+CondaPipeline([], "ts-hexgui", "lsst.ts.hexgui", "noarch")

@@ -19,7 +19,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-__all__ = ["run_application", "check_arguments"]
+__all__ = ["run_hexgui", "check_arguments"]
 
 import asyncio
 import functools
@@ -32,8 +32,8 @@ from PySide6.QtCore import QCommandLineOption, QCommandLineParser
 from .main_window import MainWindow
 
 
-def run_application() -> None:
-    """Run the application."""
+def run_hexgui() -> None:
+    """Run the hexapod GUI."""
     base_frame_run_application(main)
 
 
@@ -55,7 +55,7 @@ async def main(argv: list) -> bool:
     app = qasync.QApplication.instance()
     if hasattr(app, "aboutToQuit"):
         getattr(app, "aboutToQuit").connect(
-            functools.partial(close_future, future, loop)
+            functools.partial(cancel_future, future, loop)
         )
 
     app.setApplicationName("Hexapod EUI")
@@ -144,8 +144,8 @@ def check_arguments(args: list) -> None:
         raise ValueError("The argument must be 1 or 2.")
 
 
-def close_future(future: asyncio.Future, loop: asyncio.AbstractEventLoop) -> None:
-    """Close the future.
+def cancel_future(future: asyncio.Future, loop: asyncio.AbstractEventLoop) -> None:
+    """Cancel the future.
 
     This is needed to ensure that all pre- and post-processing for the event
     loop is done. See the source code in qasync library for the details.
@@ -159,4 +159,5 @@ def close_future(future: asyncio.Future, loop: asyncio.AbstractEventLoop) -> Non
     """
 
     loop.call_later(10, future.cancel)
-    future.cancel()
+    if not future.cancelled():
+        future.cancel()

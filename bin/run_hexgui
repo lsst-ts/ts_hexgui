@@ -18,6 +18,6 @@
 # GNU General Public License for more details.
 #
 
-from lsst.ts.hexgui import run_application
+from lsst.ts.hexgui import run_hexgui
 
-run_application()
+run_hexgui()

@@ -26,7 +26,14 @@ import pathlib
 import sys
 from datetime import datetime
 
-from lsst.ts.guitool import ControlTabs, QMessageBoxAsync, get_button_action
+from lsst.ts.guitool import (
+    ControlTabs,
+    QMessageBoxAsync,
+    get_button_action,
+    get_config_dir,
+    read_yaml_file,
+)
+from lsst.ts.tcpip import LOCALHOST_IPV4
 from lsst.ts.xml.enums import MTHexapod
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
@@ -49,7 +56,7 @@ class MainWindow(QMainWindow):
         Is outputting the log messages on screen or not.
     hexapod_type : `MTHexapod.SalIndex`
         The hexapod type.
-    is_simulation_mode: `bool`
+    is_simulation_mode : `bool`
         Is the simulation mode or not.
     log : `logging.Logger` or None, optional
         A logger. If None, a logger will be instantiated. (the default is
@@ -87,11 +94,7 @@ class MainWindow(QMainWindow):
             log=log,
         )
 
-        self.model = Model(
-            self.log,
-            hexapod_type,
-            is_simulation_mode=is_simulation_mode,
-        )
+        self.model = self._create_model(hexapod_type, is_simulation_mode)
         self._control_panel = ControlPanel(self.model)
 
         # Control tabs
@@ -120,6 +123,8 @@ class MainWindow(QMainWindow):
         )
 
         self._add_tool_bar()
+
+        self.model.report_default()
 
         if is_simulation_mode:
             self.log.info("Running the simulation mode.")
@@ -214,6 +219,54 @@ class MainWindow(QMainWindow):
         )
 
         return log_dir / name
+
+    def _create_model(
+        self,
+        hexapod_type: MTHexapod.SalIndex,
+        is_simulation_mode: bool,
+        version: str = "v4",
+    ) -> Model:
+        """Create the model.
+
+        Parameters
+        ----------
+        hexapod_type : `MTHexapod.SalIndex`
+            The hexapod type.
+        is_simulation_mode : `bool`
+            Is the simulation mode or not.
+        version : `str`, optional
+            Version of the configuration file. (the default is "v4")
+
+        Returns
+        -------
+        `Model`
+            Model object.
+        """
+
+        # Read the yaml file
+        filepath = get_config_dir(f"MTHexapod/{version}") / "default_gui.yaml"
+        default_settings = read_yaml_file(filepath)
+
+        config_name = (
+            "camera_config"
+            if hexapod_type == MTHexapod.SalIndex.CAMERA_HEXAPOD
+            else "m2_config"
+        )
+
+        host = (
+            LOCALHOST_IPV4
+            if is_simulation_mode
+            else default_settings[config_name]["host"]
+        )
+
+        return Model(
+            self.log,
+            hexapod_type,
+            host=host,
+            port=default_settings[config_name]["port"],
+            timeout_connection=default_settings["connection_timeout"],
+            is_simulation_mode=is_simulation_mode,
+        )
 
     def _create_layout(self) -> QVBoxLayout:
         """Create the layout.

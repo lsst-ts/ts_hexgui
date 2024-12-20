@@ -14,7 +14,7 @@ build:
   noarch: python
   script: {{ PYTHON }} -m pip install --no-deps --ignore-installed .
   entry_points:
-    - run_hexgui = lsst.ts.hexgui.application:run_application
+    - run_hexgui = lsst.ts.hexgui.application:run_hexgui
 
 test:
   requires:

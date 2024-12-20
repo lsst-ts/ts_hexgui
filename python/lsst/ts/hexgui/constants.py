@@ -19,7 +19,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-__all__ = ["NUM_STRUT", "NUM_DRIVE"]
+__all__ = ["NUM_STRUT", "NUM_DRIVE", "NUM_DEGREE_OF_FREEDOM"]
 
 
 # Number of the struts
@@ -27,3 +27,6 @@ NUM_STRUT = 6
 
 # Number of the drives
 NUM_DRIVE = 3
+
+# Number of the degree of freedom
+NUM_DEGREE_OF_FREEDOM = 6

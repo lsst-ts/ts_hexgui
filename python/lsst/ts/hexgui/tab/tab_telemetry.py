@@ -22,18 +22,31 @@
 __all__ = ["TabTelemetry"]
 
 from lsst.ts.guitool import (
-    ButtonStatus,
     TabTemplate,
     create_group_box,
     create_label,
     create_radio_indicators,
-    update_button_color,
+    update_boolean_indicator_status,
 )
-from PySide6.QtGui import QPalette
-from PySide6.QtWidgets import QFormLayout, QGroupBox, QHBoxLayout, QVBoxLayout
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QRadioButton,
+    QVBoxLayout,
+)
+from qasync import asyncSlot
 
+from ..config import Config
 from ..constants import NUM_STRUT
 from ..model import Model
+from ..signals import (
+    SignalApplicationStatus,
+    SignalConfig,
+    SignalControl,
+    SignalPosition,
+)
 
 
 class TabTelemetry(TabTemplate):
@@ -110,14 +123,26 @@ class TabTelemetry(TabTemplate):
             "strut_length_max": create_label(),
             "strut_velocity_max": create_label(),
             "strut_acceleration_max": create_label(),
+            "pivot_x": create_label(),
+            "pivot_y": create_label(),
+            "pivot_z": create_label(),
             "drives_enabled": create_label(),
         }
 
         self._application_status = create_radio_indicators(15)
 
-        self._set_default()
-
         self.set_widget_and_layout(is_scrollable=True)
+
+        self._set_signal_application_status(
+            self.model.signals["application_status"]  # type: ignore[arg-type]
+        )
+        self._set_signal_config(self.model.signals["config"])  # type: ignore[arg-type]
+        self._set_signal_control(
+            self.model.signals["control"]  # type: ignore[arg-type]
+        )
+        self._set_signal_position(
+            self.model.signals["position"]  # type: ignore[arg-type]
+        )
 
     def create_layout(self) -> QVBoxLayout:
 
@@ -234,6 +259,11 @@ class TabTelemetry(TabTemplate):
 
         self.add_empty_row_to_form_layout(layout)
 
+        for axis in ["x", "y", "z"]:
+            layout.addRow(f"Pivot {axis}:", self._configuration[f"pivot_{axis}"])
+
+        self.add_empty_row_to_form_layout(layout)
+
         layout.addRow("Drives enabled:", self._configuration["drives_enabled"])
 
         return create_group_box("Configuration Settings", layout)
@@ -324,48 +354,271 @@ class TabTelemetry(TabTemplate):
 
         return create_group_box("Application Status", layout)
 
-    def _set_default(self) -> None:
-        """Set the default values."""
+    def _set_signal_application_status(self, signal: SignalApplicationStatus) -> None:
+        """Set the application status signal.
 
-        # Position telemetry
-        self._telemetry_position["in_motion"].setText("False")
+        Parameters
+        ----------
+        signal : `SignalApplicationStatus`
+            Signal.
+        """
 
-        for axis in ("x", "y", "z"):
-            self._telemetry_position[f"position_{axis}"].setText("0 um")
-            self._telemetry_position[f"position_r{axis}"].setText("0 deg")
+        signal.status.connect(self._callback_application_status)
 
-        self._telemetry_position["application_status_word"].setText("0x0")
+    @asyncSlot()
+    async def _callback_application_status(self, status: int) -> None:
+        """Callback of the application status.
 
-        self._telemetry_position["time_frame_difference"].setText("0 sec")
+        Parameters
+        ----------
+        status : `int`
+            Application status.
+        """
 
-        # Strut telemetry
-        for idx in range(NUM_STRUT):
-            self._telemetry_strut[f"position_{idx}"].setText("0 um")
-            self._telemetry_strut[f"position_error_{idx}"].setText("0 um")
-            self._telemetry_strut[f"command_position_{idx}"].setText("0 um")
-            self._telemetry_strut[f"command_acceleration_{idx}"].setText("0 um/sec^2")
+        self._update_application_status(status)
 
-        # Configuration
-        self._configuration["position_max_xy"].setText("0 um")
-        self._configuration["position_max_z"].setText("0 um")
-        self._configuration["position_min_z"].setText("0 um")
+    def _update_application_status(self, status: int) -> None:
+        """Update the application status.
 
-        self._configuration["angle_max_xy"].setText("0 deg")
-        self._configuration["angle_max_z"].setText("0 deg")
-        self._configuration["angle_min_z"].setText("0 deg")
+        Parameters
+        ----------
+        status : `int`
+            Application status.
+        """
 
-        self._configuration["linear_velocity_max_xy"].setText("0 um/sec")
-        self._configuration["linear_velocity_max_z"].setText("0 um/sec")
+        self._telemetry_position["application_status_word"].setText(hex(status))
 
-        self._configuration["angular_velocity_max_xy"].setText("0 deg/sec")
-        self._configuration["angular_velocity_max_z"].setText("0 deg/sec")
+        faults = [0, 5, 6, 7, 8, 9, 11, 13, 14]
+        self._update_boolean_indicators(status, self._application_status, faults)
 
-        self._configuration["strut_length_max"].setText("0 um")
-        self._configuration["strut_velocity_max"].setText("0 um/sec")
-        self._configuration["strut_acceleration_max"].setText("0 um/sec^2")
+    def _update_boolean_indicators(
+        self, status: int, indicators: list[QRadioButton], faults: list[int]
+    ) -> None:
+        """Update the boolean indicators.
 
-        self._configuration["drives_enabled"].setText("False")
+        Parameters
+        ----------
+        status : `int`
+            Status.
+        indicators : `list` [`QRadioButton`]
+            Indicators.
+        faults : `list` [`int`]
+            Indexes of the faults.
+        """
 
-        # Set the default indicators
-        for indicator in self._application_status:
-            update_button_color(indicator, QPalette.Base, ButtonStatus.Default)
+        for idx, indicator in enumerate(indicators):
+            update_boolean_indicator_status(
+                indicator,
+                status & (1 << idx),
+                is_fault=(idx in faults),
+            )
+
+    def _set_signal_config(self, signal: SignalConfig) -> None:
+        """Set the config signal.
+
+        Parameters
+        ----------
+        signal : `SignalConfig`
+            Signal.
+        """
+
+        signal.config.connect(self._callback_config)
+
+    @asyncSlot()
+    async def _callback_config(self, config: Config) -> None:
+        """Callback of the configuration.
+
+        Parameters
+        ----------
+        config : `Config`
+            Configuration.
+        """
+
+        self._configuration["position_max_xy"].setText(
+            f"{config.hexapod_position_xy_max} um"
+        )
+        self._configuration["position_max_z"].setText(
+            f"{config.hexapod_position_z_max} um"
+        )
+        self._configuration["position_min_z"].setText(
+            f"{config.hexapod_position_z_min} um"
+        )
+
+        self._configuration["angle_max_xy"].setText(
+            f"{config.hexapod_position_rxry_max} deg"
+        )
+        self._configuration["angle_max_z"].setText(
+            f"{config.hexapod_position_rz_max} deg"
+        )
+        self._configuration["angle_min_z"].setText(
+            f"{config.hexapod_position_rz_min} deg"
+        )
+
+        self._configuration["linear_velocity_max_xy"].setText(
+            f"{config.hexapod_linear_radial_velocity_max} um/sec"
+        )
+        self._configuration["linear_velocity_max_z"].setText(
+            f"{config.hexapod_linear_axial_velocity_max} um/sec"
+        )
+
+        self._configuration["angular_velocity_max_xy"].setText(
+            f"{config.hexapod_angular_radial_velocity_max} deg/sec"
+        )
+        self._configuration["angular_velocity_max_z"].setText(
+            f"{config.hexapod_angular_axial_velocity_max} deg/sec"
+        )
+
+        self._configuration["strut_length_max"].setText(
+            f"{config.strut_upper_position_max} um"
+        )
+        self._configuration["strut_velocity_max"].setText(
+            f"{config.strut_velocity_max} um/sec"
+        )
+        self._configuration["strut_acceleration_max"].setText(
+            f"{config.strut_acceleration_limit} um/sec^2"
+        )
+
+        self._configuration["pivot_x"].setText(f"{config.hexapod_pivot[0]} um")
+        self._configuration["pivot_y"].setText(f"{config.hexapod_pivot[1]} um")
+        self._configuration["pivot_z"].setText(f"{config.hexapod_pivot[2]} um")
+
+        color = Qt.green if config.drives_enabled else Qt.red
+        self._configuration["drives_enabled"].setText(
+            f"<font color='{color.name}'>{str(config.drives_enabled)}</font>"
+        )
+
+    def _set_signal_control(self, signal: SignalControl) -> None:
+        """Set the control signal.
+
+        Parameters
+        ----------
+        signal : `SignalControl`
+            Signal.
+        """
+
+        signal.command_acceleration.connect(self._callback_command_acceleration)
+        signal.command_position.connect(self._callback_command_position)
+        signal.time_difference.connect(self._callback_time_difference)
+
+    @asyncSlot()
+    async def _callback_command_acceleration(self, accelerations: list[float]) -> None:
+        """Callback of the commanded acceleration.
+
+        Parameters
+        ----------
+        accelerations : `list` [`float`]
+            Commanded accelerations of [strut_0, strut_1, ..., strut_5] in
+            um/sec^2.
+        """
+
+        for idx, acceleration in enumerate(accelerations):
+            self._telemetry_strut[f"command_acceleration_{idx}"].setText(
+                f"{acceleration:.3f} um/sec^2"
+            )
+
+    @asyncSlot()
+    async def _callback_command_position(self, positions: list[float]) -> None:
+        """Callback of the commanded position.
+
+        Parameters
+        ----------
+        positions : `list` [`float`]
+            Commanded positions of [strut_0, strut_1, ..., strut_5] in um.
+        """
+
+        for idx, position in enumerate(positions):
+            self._telemetry_strut[f"command_position_{idx}"].setText(
+                f"{position:.3f} um"
+            )
+
+    @asyncSlot()
+    async def _callback_time_difference(self, time_difference: float) -> None:
+        """Callback of the time frame difference.
+
+        Parameters
+        ----------
+        time_difference : `float`
+            Time difference in seconds.
+        """
+
+        self._telemetry_position["time_frame_difference"].setText(
+            f"{time_difference:.7f} sec"
+        )
+
+    def _set_signal_position(self, signal: SignalPosition) -> None:
+        """Set the position signal.
+
+        Parameters
+        ----------
+        signal : `SignalPosition`
+            Signal.
+        """
+
+        signal.strut_position.connect(self._callback_strut_position)
+        signal.strut_position_error.connect(self._callback_strut_position_error)
+        signal.hexapod_position.connect(self._callback_hexapod_position)
+        signal.in_motion.connect(self._callback_in_motion)
+
+    @asyncSlot()
+    async def _callback_strut_position(self, positions: list[float]) -> None:
+        """Callback of the current strut position.
+
+        Parameters
+        ----------
+        positions : `list` [`float`]
+            Strut positions of [strut_0, strut_1, ..., strut_5] in micron.
+        """
+
+        for idx, position in enumerate(positions):
+            self._telemetry_strut[f"position_{idx}"].setText(f"{position:.3f} um")
+
+    @asyncSlot()
+    async def _callback_strut_position_error(
+        self, position_errors: list[float]
+    ) -> None:
+        """Callback of the current strut position error.
+
+        Parameters
+        ----------
+        position_errors : `list` [`float`]
+            Strut position errors of [strut_0, strut_1, ..., strut_5] in
+            micron.
+        """
+
+        for idx, position_error in enumerate(position_errors):
+            self._telemetry_strut[f"position_error_{idx}"].setText(
+                f"{position_error:.3f} um"
+            )
+
+    @asyncSlot()
+    async def _callback_hexapod_position(self, positions: list[float]) -> None:
+        """Callback of the current hexapod position.
+
+        Parameters
+        ----------
+        positions : `list` [`float`]
+            Hexapod positions of [x, y, z, rx, ry, rz] in micron and degree.
+        """
+
+        for idx, axis in enumerate(["x", "y", "z"]):
+            self._telemetry_position[f"position_{axis}"].setText(
+                f"{positions[idx]:.3f} um"
+            )
+            self._telemetry_position[f"position_r{axis}"].setText(
+                f"{positions[idx+3]:.7f} deg"
+            )
+
+    @asyncSlot()
+    async def _callback_in_motion(self, in_motion: bool) -> None:
+        """Callback of the in-motion flag.
+
+        Parameters
+        ----------
+        in_motion : `bool`
+            Hexapod is in motion or not.
+        """
+
+        color = Qt.green if in_motion else Qt.black
+        self._telemetry_position["in_motion"].setText(
+            f"<font color='{color.name}'>{str(in_motion)}</font>"
+        )

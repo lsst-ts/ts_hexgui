@@ -42,8 +42,10 @@ from PySide6.QtWidgets import (
 )
 from qasync import asyncSlot
 
+from .constants import NUM_STRUT
 from .enums import CommandSource, MotionPattern, TriggerEnabledSubState, TriggerState
 from .model import Model
+from .signals import SignalState
 
 
 class ControlPanel(QWidget):
@@ -85,6 +87,8 @@ class ControlPanel(QWidget):
         self._buttons = self._create_buttons()
 
         self.setLayout(self._create_layout())
+
+        self._set_signal_state(self.model.signals["state"])  # type: ignore[arg-type]
 
         self._set_default()
 
@@ -409,32 +413,32 @@ class ControlPanel(QWidget):
 
         # Column 1
         layout_parameters_1 = QFormLayout()
-        layout_parameters_1.addRow("State trigger", self._command_parameters["state"])
+        layout_parameters_1.addRow("State trigger:", self._command_parameters["state"])
         layout_parameters_1.addRow(
-            "Enabled sub-state trigger", self._command_parameters["enabled_substate"]
+            "Enabled sub-state trigger:", self._command_parameters["enabled_substate"]
         )
-        layout_parameters_1.addRow("Command source", self._command_parameters["source"])
         layout_parameters_1.addRow(
-            "Motion pattern", self._command_parameters["motion_pattern"]
+            "Command source:", self._command_parameters["source"]
+        )
+        layout_parameters_1.addRow(
+            "Motion pattern:", self._command_parameters["motion_pattern"]
         )
 
         # Column 2
         layout_parameters_2 = QFormLayout()
-        layout_parameters_2.addRow("X", self._command_parameters["position_x"])
-        layout_parameters_2.addRow("Y", self._command_parameters["position_y"])
-        layout_parameters_2.addRow("Z", self._command_parameters["position_z"])
-        layout_parameters_2.addRow("Rx", self._command_parameters["position_rx"])
-        layout_parameters_2.addRow("Ry", self._command_parameters["position_ry"])
-        layout_parameters_2.addRow("Rz", self._command_parameters["position_rz"])
+        for axis in ["X", "Y", "Z", "Rx", "Ry", "Rz"]:
+            layout_parameters_2.addRow(
+                f"{axis}:",
+                self._command_parameters[f"position_{axis.lower()}"],
+            )
 
         # Column 3
         layout_parameters_3 = QFormLayout()
-        layout_parameters_3.addRow("Strut 0", self._command_parameters["strut0"])
-        layout_parameters_3.addRow("Strut 1", self._command_parameters["strut1"])
-        layout_parameters_3.addRow("Strut 2", self._command_parameters["strut2"])
-        layout_parameters_3.addRow("Strut 3", self._command_parameters["strut3"])
-        layout_parameters_3.addRow("Strut 4", self._command_parameters["strut4"])
-        layout_parameters_3.addRow("Strut 5", self._command_parameters["strut5"])
+        for idx in range(NUM_STRUT):
+            layout_parameters_3.addRow(
+                f"Strut {idx}:",
+                self._command_parameters[f"strut{idx}"],
+            )
 
         layout = QHBoxLayout()
         layout.addLayout(layout_parameters_1)
@@ -457,19 +461,45 @@ class ControlPanel(QWidget):
 
         return create_group_box("Special Command", layout)
 
-    def _set_default(self) -> None:
-        """Set the default values."""
+    def _set_signal_state(self, signal: SignalState) -> None:
+        """Set the state signal.
 
-        self._update_fault_status(False)
+        Parameters
+        ----------
+        signal : `SignalState`
+            Signal.
+        """
 
-        self._labels["source"].setText(CommandSource.GUI.name)
+        signal.command_source.connect(self._callback_command_source)
+        signal.state.connect(self._callback_state)
+        signal.substate_enabled.connect(self._callback_substate_enabled)
 
-        self._labels["state"].setText(MTHexapod.ControllerState.STANDBY.name)
-        self._labels["enabled_substate"].setText(
-            MTHexapod.EnabledSubstate.STATIONARY.name
-        )
+    @asyncSlot()
+    async def _callback_command_source(self, source: int) -> None:
+        """Callback of the controller's command source signal.
 
-        self._commands["state"].setChecked(True)
+        Parameters
+        ----------
+        source : `int`
+            Source.
+        """
+
+        self._labels["source"].setText(CommandSource(source).name)
+
+    @asyncSlot()
+    async def _callback_state(self, state: int) -> None:
+        """Callback of the controller's state signal.
+
+        Parameters
+        ----------
+        state : `int`
+            State.
+        """
+
+        controller_state = MTHexapod.ControllerState(state)
+        self._labels["state"].setText(controller_state.name)
+
+        self._update_fault_status(controller_state == MTHexapod.ControllerState.FAULT)
 
     def _update_fault_status(self, is_fault: bool) -> None:
         """Update the fault status.
@@ -487,3 +517,22 @@ class ControlPanel(QWidget):
         # Set the color
         status = ButtonStatus.Error if is_fault else ButtonStatus.Normal
         update_button_color(self._indicator_fault, QPalette.Button, status)
+
+    @asyncSlot()
+    async def _callback_substate_enabled(self, substate: int) -> None:
+        """Callback of the controller's enabled substate signal.
+
+        Parameters
+        ----------
+        substate : `int`
+            Substate.
+        """
+
+        self._labels["enabled_substate"].setText(
+            MTHexapod.EnabledSubstate(substate).name
+        )
+
+    def _set_default(self) -> None:
+        """Set the default values."""
+
+        self._commands["state"].setChecked(True)

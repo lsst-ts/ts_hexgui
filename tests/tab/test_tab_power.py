@@ -19,6 +19,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import asyncio
 import logging
 
 import pytest
@@ -55,3 +56,15 @@ async def test_callback_time_out(widget: TabPower) -> None:
         assert (
             widget._figures["voltage"].get_points(idx)[-1].y() == widget._voltages[idx]
         )
+
+
+@pytest.mark.asyncio
+async def test_set_signal_power(widget: TabPower) -> None:
+
+    widget.model.report_power([10.1, 20.2, 30.3, 40.4, 50.5, 60.6], [70.7, 80.8, 90.9])
+
+    # Sleep so the event loop can access CPU to handle the signal
+    await asyncio.sleep(1)
+
+    assert widget._currents == [10.1, 20.2, 30.3, 40.4, 50.5, 60.6]
+    assert widget._voltages == [70.7, 80.8, 90.9]

@@ -19,12 +19,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import asyncio
 import logging
 
 import pytest
-from lsst.ts.hexgui import Model
+from lsst.ts.hexgui import Config, Model
 from lsst.ts.hexgui.tab import TabTelemetry
 from lsst.ts.xml.enums import MTHexapod
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QPalette
 from pytestqt.qtbot import QtBot
 
 
@@ -41,3 +44,136 @@ def widget(qtbot: QtBot) -> TabTelemetry:
 def test_init(widget: TabTelemetry) -> None:
 
     assert len(widget._application_status) == 15
+
+
+@pytest.mark.asyncio
+async def test_set_signal_application_status(widget: TabTelemetry) -> None:
+
+    widget.model.report_application_status(0xFFFF)
+
+    # Sleep so the event loop can access CPU to handle the signal
+    await asyncio.sleep(1)
+
+    for idx, indicator in enumerate(widget._application_status):
+        if idx in [0, 5, 6, 7, 8, 9, 11, 13, 14]:
+            assert indicator.palette().color(QPalette.Base) == Qt.red
+        else:
+            assert indicator.palette().color(QPalette.Base) == Qt.green
+
+
+@pytest.mark.asyncio
+async def test_set_signal_config(widget: TabTelemetry) -> None:
+
+    config = Config(
+        1.1,
+        2.2,
+        3.3,
+        4.4,
+        5.5,
+        6.6,
+        7.7,
+        8.8,
+        9.9,
+        10.1,
+        11.1,
+        12.2,
+        13.3,
+        [14.4, 15.5, 16.6],
+        True,
+    )
+    widget.model.report_config(config)
+
+    # Sleep so the event loop can access CPU to handle the signal
+    await asyncio.sleep(1)
+
+    assert widget._configuration["position_max_xy"].text() == "8.8 um"
+    assert widget._configuration["position_max_z"].text() == "10.1 um"
+    assert widget._configuration["position_min_z"].text() == "9.9 um"
+    assert widget._configuration["angle_max_xy"].text() == "11.1 deg"
+    assert widget._configuration["angle_max_z"].text() == "13.3 deg"
+    assert widget._configuration["angle_min_z"].text() == "12.2 deg"
+    assert widget._configuration["linear_velocity_max_xy"].text() == "2.2 um/sec"
+    assert widget._configuration["linear_velocity_max_z"].text() == "3.3 um/sec"
+    assert widget._configuration["angular_velocity_max_xy"].text() == "4.4 deg/sec"
+    assert widget._configuration["angular_velocity_max_z"].text() == "5.5 deg/sec"
+    assert widget._configuration["strut_length_max"].text() == "6.6 um"
+    assert widget._configuration["strut_velocity_max"].text() == "7.7 um/sec"
+    assert widget._configuration["strut_acceleration_max"].text() == "1.1 um/sec^2"
+    assert widget._configuration["pivot_x"].text() == "14.4 um"
+    assert widget._configuration["pivot_y"].text() == "15.5 um"
+    assert widget._configuration["pivot_z"].text() == "16.6 um"
+    assert (
+        widget._configuration["drives_enabled"].text()
+        == "<font color='green'>True</font>"
+    )
+
+
+@pytest.mark.asyncio
+async def test_set_signal_control(widget: TabTelemetry) -> None:
+
+    widget.model.report_control_data(
+        [1.1, 2.2, 3.3, 4.4, 5.5, 6.6],
+        [7.7, 8.8, 9.9, 10.0, 11.1, 12.2],
+        13.3,
+    )
+
+    # Sleep so the event loop can access CPU to handle the signal
+    await asyncio.sleep(1)
+
+    assert widget._telemetry_strut["command_acceleration_0"].text() == "1.100 um/sec^2"
+    assert widget._telemetry_strut["command_acceleration_1"].text() == "2.200 um/sec^2"
+    assert widget._telemetry_strut["command_acceleration_2"].text() == "3.300 um/sec^2"
+    assert widget._telemetry_strut["command_acceleration_3"].text() == "4.400 um/sec^2"
+    assert widget._telemetry_strut["command_acceleration_4"].text() == "5.500 um/sec^2"
+    assert widget._telemetry_strut["command_acceleration_5"].text() == "6.600 um/sec^2"
+
+    assert widget._telemetry_strut["command_position_0"].text() == "7.700 um"
+    assert widget._telemetry_strut["command_position_1"].text() == "8.800 um"
+    assert widget._telemetry_strut["command_position_2"].text() == "9.900 um"
+    assert widget._telemetry_strut["command_position_3"].text() == "10.000 um"
+    assert widget._telemetry_strut["command_position_4"].text() == "11.100 um"
+    assert widget._telemetry_strut["command_position_5"].text() == "12.200 um"
+
+    assert (
+        widget._telemetry_position["time_frame_difference"].text() == "13.3000000 sec"
+    )
+
+
+@pytest.mark.asyncio
+async def test_set_signal_position(widget: TabTelemetry) -> None:
+
+    widget.model.report_position(
+        [1.1, 2.2, 3.3, 4.4, 5.5, 6.6],
+        [7.7, 8.8, 9.9, 10.0, 11.1, 12.2],
+        [13.3, 14.4, 15.5, 16.6, 17.7, 18.8],
+        True,
+    )
+
+    # Sleep so the event loop can access CPU to handle the signal
+    await asyncio.sleep(1)
+
+    assert widget._telemetry_strut["position_0"].text() == "1.100 um"
+    assert widget._telemetry_strut["position_1"].text() == "2.200 um"
+    assert widget._telemetry_strut["position_2"].text() == "3.300 um"
+    assert widget._telemetry_strut["position_3"].text() == "4.400 um"
+    assert widget._telemetry_strut["position_4"].text() == "5.500 um"
+    assert widget._telemetry_strut["position_5"].text() == "6.600 um"
+
+    assert widget._telemetry_strut["position_error_0"].text() == "7.700 um"
+    assert widget._telemetry_strut["position_error_1"].text() == "8.800 um"
+    assert widget._telemetry_strut["position_error_2"].text() == "9.900 um"
+    assert widget._telemetry_strut["position_error_3"].text() == "10.000 um"
+    assert widget._telemetry_strut["position_error_4"].text() == "11.100 um"
+    assert widget._telemetry_strut["position_error_5"].text() == "12.200 um"
+
+    assert widget._telemetry_position["position_x"].text() == "13.300 um"
+    assert widget._telemetry_position["position_y"].text() == "14.400 um"
+    assert widget._telemetry_position["position_z"].text() == "15.500 um"
+    assert widget._telemetry_position["position_rx"].text() == "16.6000000 deg"
+    assert widget._telemetry_position["position_ry"].text() == "17.7000000 deg"
+    assert widget._telemetry_position["position_rz"].text() == "18.8000000 deg"
+
+    assert (
+        widget._telemetry_position["in_motion"].text()
+        == "<font color='green'>True</font>"
+    )

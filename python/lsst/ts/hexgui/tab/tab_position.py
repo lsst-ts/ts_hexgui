@@ -25,8 +25,9 @@ from lsst.ts.guitool import FigureConstant, TabTemplate
 from PySide6.QtWidgets import QVBoxLayout
 from qasync import asyncSlot
 
-from ..constants import NUM_STRUT
+from ..constants import NUM_DEGREE_OF_FREEDOM, NUM_STRUT
 from ..model import Model
+from ..signals import SignalPosition
 
 
 class TabPosition(TabTemplate):
@@ -54,7 +55,7 @@ class TabPosition(TabTemplate):
         self._strut_lengths = [0.0] * NUM_STRUT
 
         # (x, y, z, rx, ry, rz) in micron and degree
-        self._positions = [0.0] * 6
+        self._positions = [0.0] * NUM_DEGREE_OF_FREEDOM
 
         # Realtime figures
         self._figures = self._create_figures()
@@ -67,6 +68,8 @@ class TabPosition(TabTemplate):
         )
 
         self.set_widget_and_layout()
+
+        self._set_signal_position(self.model.signals["position"])  # type: ignore[arg-type]
 
     def _create_figures(self, num_realtime: int = 200) -> dict:
         """Create the figures to show the positions of strut and hexapod.
@@ -146,3 +149,39 @@ class TabPosition(TabTemplate):
             layout.addWidget(figure)
 
         return layout
+
+    def _set_signal_position(self, signal: SignalPosition) -> None:
+        """Set the position signal.
+
+        Parameters
+        ----------
+        signal : `SignalPosition`
+            Signal.
+        """
+
+        signal.strut_position.connect(self._callback_strut_position)
+        signal.hexapod_position.connect(self._callback_hexapod_position)
+
+    @asyncSlot()
+    async def _callback_strut_position(self, positions: list[float]) -> None:
+        """Callback of the current strut position.
+
+        Parameters
+        ----------
+        positions : `float`
+            Strut positions of [strut_0, strut_1, ..., strut_5] in micron.
+        """
+
+        self._strut_lengths = positions
+
+    @asyncSlot()
+    async def _callback_hexapod_position(self, positions: list[float]) -> None:
+        """Callback of the current hexapod position.
+
+        Parameters
+        ----------
+        positions : `float`
+            Hexapod positions of [x, y, z, rx, ry, rz] in micron and degree.
+        """
+
+        self._positions = positions

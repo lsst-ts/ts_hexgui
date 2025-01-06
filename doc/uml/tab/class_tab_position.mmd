@@ -6,8 +6,12 @@ namespace guitool {
 
 namespace hexgui {
   class Model
+  class SignalPosition
 }
+
+Model *-- SignalPosition : emit()
 
 TabTemplate <|-- TabPosition
 
 TabPosition *-- Model
+TabPosition --> SignalPosition : connect()

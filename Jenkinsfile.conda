@@ -1,2 +1,2 @@
 @Library('JenkinsShared')_
-CondaPipeline([], "ts-hexgui", "lsst.ts.hexgui", "noarch")
+CondaPipeline(["ts_config_mttcs"], "ts-hexgui", "lsst.ts.hexgui", "noarch")

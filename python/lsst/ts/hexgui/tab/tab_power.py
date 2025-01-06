@@ -27,6 +27,7 @@ from qasync import asyncSlot
 
 from ..constants import NUM_DRIVE, NUM_STRUT
 from ..model import Model
+from ..signals import SignalPower
 
 
 class TabPower(TabTemplate):
@@ -67,6 +68,8 @@ class TabPower(TabTemplate):
         )
 
         self.set_widget_and_layout()
+
+        self._set_signal_power(self.model.signals["power"])  # type: ignore[arg-type]
 
     def _create_figures(self, num_realtime: int = 200) -> dict:
         """Create the figures to show the current and voltage.
@@ -132,3 +135,39 @@ class TabPower(TabTemplate):
             layout.addWidget(figure)
 
         return layout
+
+    def _set_signal_power(self, signal: SignalPower) -> None:
+        """Set the power signal.
+
+        Parameters
+        ----------
+        signal : `SignalPower`
+            Signal.
+        """
+
+        signal.current.connect(self._callback_current)
+        signal.voltage.connect(self._callback_voltage)
+
+    @asyncSlot()
+    async def _callback_current(self, currents: list[float]) -> None:
+        """Callback of the current.
+
+        Parameters
+        ----------
+        currents : `list` [`float`]
+            Currents of [strut_0, strut_1, ..., strut_5] in ampere.
+        """
+
+        self._currents = currents
+
+    @asyncSlot()
+    async def _callback_voltage(self, voltages: list[float]) -> None:
+        """Callback of the voltage.
+
+        Parameters
+        ----------
+        voltages : `list` [`float`]
+            Bus voltages of [drive_0, drive_1, drive_2] in volts.
+        """
+
+        self._voltages = voltages

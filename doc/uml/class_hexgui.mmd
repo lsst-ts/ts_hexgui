@@ -16,7 +16,18 @@ MainWindow *-- ControlTabs
 MainWindow *-- ControlPanel
 MainWindow *-- TabSettings
 
+Model *-- Status
+Model *-- SignalState : emit()
+Model *-- SignalApplicationStatus : emit()
+Model *-- SignalPosition : emit()
+Model *-- SignalPower : emit()
+Model *-- SignalControl : emit()
+Model *-- SignalDrive : emit()
+Model *-- SignalConfig : emit()
+Model ..> Config
+
 ControlPanel *-- Model
+ControlPanel --> SignalState : connect()
 
 TabSettings *-- Model
 

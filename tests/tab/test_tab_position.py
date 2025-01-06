@@ -19,10 +19,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import asyncio
 import logging
 
 import pytest
-from lsst.ts.hexgui import NUM_STRUT, Model
+from lsst.ts.hexgui import NUM_DEGREE_OF_FREEDOM, NUM_STRUT, Model
 from lsst.ts.hexgui.tab import TabPosition
 from lsst.ts.xml.enums import MTHexapod
 from pytestqt.qtbot import QtBot
@@ -54,3 +55,17 @@ async def test_callback_time_out(widget: TabPosition) -> None:
             assert widget._figures["displacement"].get_points(idx)[-1].y() == position
         else:
             assert widget._figures["angle"].get_points(idx - 3)[-1].y() == position
+
+
+@pytest.mark.asyncio
+async def test_set_signal_position_velocity(widget: TabPosition) -> None:
+
+    widget.model.report_position(
+        [10.1] * NUM_STRUT, [20.2] * NUM_STRUT, [30.3] * NUM_DEGREE_OF_FREEDOM, True
+    )
+
+    # Sleep so the event loop can access CPU to handle the signal
+    await asyncio.sleep(1)
+
+    assert widget._strut_lengths == [10.1] * NUM_STRUT
+    assert widget._positions == [30.3] * NUM_DEGREE_OF_FREEDOM

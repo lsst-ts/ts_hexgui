@@ -23,7 +23,7 @@ import asyncio
 import logging
 
 import pytest
-from lsst.ts.hexgui import ControlPanel, Model
+from lsst.ts.hexgui import CommandSource, ControlPanel, Model
 from lsst.ts.xml.enums import MTHexapod
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPalette
@@ -81,3 +81,23 @@ def test_update_fault_status(widget: ControlPanel) -> None:
     widget._update_fault_status(False)
     assert widget._indicator_fault.text() == "Not Faulted"
     assert widget._indicator_fault.palette().color(QPalette.Button) == Qt.green
+
+
+@pytest.mark.asyncio
+async def test_set_signal_state(widget: ControlPanel) -> None:
+
+    command_source = CommandSource.CSC
+    state = MTHexapod.ControllerState.FAULT
+    enabled_substate = MTHexapod.EnabledSubstate.MOVING_POINT_TO_POINT
+
+    widget.model.report_state(command_source, state, enabled_substate)
+
+    # Sleep so the event loop can access CPU to handle the signal
+    await asyncio.sleep(1)
+
+    assert widget._labels["source"].text() == command_source.name
+    assert widget._labels["state"].text() == state.name
+    assert widget._labels["enabled_substate"].text() == enabled_substate.name
+
+    assert widget._indicator_fault.text() == "Faulted"
+    assert widget._indicator_fault.palette().color(QPalette.Button) == Qt.red

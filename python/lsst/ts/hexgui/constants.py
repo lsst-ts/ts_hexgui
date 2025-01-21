@@ -19,7 +19,30 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-__all__ = ["NUM_STRUT", "NUM_DRIVE", "NUM_DEGREE_OF_FREEDOM"]
+__all__ = [
+    "NUM_STRUT",
+    "NUM_DRIVE",
+    "NUM_DEGREE_OF_FREEDOM",
+    "MAX_ACTUATOR_RANGE_MIC",
+    "MAX_ACCEL_LIMIT",
+    "MAX_LINEAR_VEL_LIMIT",
+    "MAX_ANGULAR_VEL_LIMIT",
+    "CAM_XY_MAX_MIC",
+    "CAM_Z_MIN_MIC",
+    "CAM_Z_MAX_MIC",
+    "CAM_UV_MAX_DEG",
+    "CAM_W_MIN_DEG",
+    "CAM_W_MAX_DEG",
+    "M2_XY_MAX_MIC",
+    "M2_Z_MIN_MIC",
+    "M2_Z_MAX_MIC",
+    "M2_UV_MAX_DEG",
+    "M2_W_MIN_DEG",
+    "M2_W_MAX_DEG",
+    "MAX_PIVOT_X_MIC",
+    "MAX_PIVOT_Y_MIC",
+    "MAX_PIVOT_Z_MIC",
+]
 
 
 # Number of the struts
@@ -30,3 +53,36 @@ NUM_DRIVE = 3
 
 # Number of the degree of freedom
 NUM_DEGREE_OF_FREEDOM = 6
+
+# Limit of the actuator linear range
+MAX_ACTUATOR_RANGE_MIC = 16020
+
+# For the following limits, see ts_hexapod_controller.
+
+# Limit for the strut acceleration (um/sec^2).
+MAX_ACCEL_LIMIT = 500.0
+
+# Limits for the hexapod velocity (um/sec or deg/sec).
+MAX_LINEAR_VEL_LIMIT = 2000.0
+MAX_ANGULAR_VEL_LIMIT = 0.1146
+
+# Position limits of the camera hexapod
+CAM_XY_MAX_MIC = 11400
+CAM_Z_MIN_MIC = -13100
+CAM_Z_MAX_MIC = 13100
+CAM_UV_MAX_DEG = 0.36
+CAM_W_MIN_DEG = -0.1
+CAM_W_MAX_DEG = 0.1
+
+# Position limits of the M2 hexapod
+M2_XY_MAX_MIC = 10500
+M2_Z_MIN_MIC = -8900
+M2_Z_MAX_MIC = 8900
+M2_UV_MAX_DEG = 0.175
+M2_W_MIN_DEG = -0.05
+M2_W_MAX_DEG = 0.05
+
+# Limits of the pivot
+MAX_PIVOT_X_MIC = 500000
+MAX_PIVOT_Y_MIC = 500000
+MAX_PIVOT_Z_MIC = 3500000

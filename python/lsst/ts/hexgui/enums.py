@@ -19,7 +19,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-__all__ = ["CommandSource", "MotionPattern", "TriggerState", "TriggerEnabledSubState"]
+__all__ = [
+    "CommandSource",
+    "MotionPattern",
+    "TriggerState",
+    "TriggerEnabledSubState",
+    "CommandCode",
+]
 
 from enum import IntEnum, auto
 
@@ -27,14 +33,14 @@ from enum import IntEnum, auto
 class CommandSource(IntEnum):
     """Command source."""
 
-    GUI = 1
+    GUI = 0  # To fit the low-level controller's definition
     CSC = auto()
 
 
 class MotionPattern(IntEnum):
     """Motion pattern, synchronous or asynchronous."""
 
-    Sync = 1
+    Sync = 0  # To fit the low-level controller's definition
     Async = auto()
 
 
@@ -46,7 +52,7 @@ class TriggerState(IntEnum):
     The value is different from the parameter to the controller.
     """
 
-    Enable = 1  # Parameter to controller is 2
+    Enable = 0  # Parameter to controller is 2
     StandBy = auto()  # Parameter to controller is 3
     ClearError = auto()  # Parameter to controller is 6
 
@@ -59,5 +65,27 @@ class TriggerEnabledSubState(IntEnum):
     The value is different from the parameter to the controller.
     """
 
-    Move = 1  # Parameter to controller is 1
+    Move = 0  # Parameter to controller is 1
     Stop = auto()  # Parameter to controller is 3
+
+
+class CommandCode(IntEnum):
+    """Command code.
+
+    In the low-level controller code these are defined in
+    enum "CmdType".
+    """
+
+    DEFAULT = 0x0
+    ENABLE_DRIVES = 0x7000
+    SET_STATE = 0x8000
+    SET_ENABLED_SUBSTATE = 0x8001
+    POSITION_SET = 0x8004
+    SET_PIVOT_POINT = 0x8007
+    SET_RAW_STRUT = 0x8008
+    CMD_SOURCE = 0x8009
+    CONFIG_ACCEL = 0x800B
+    CONFIG_VEL = 0x800C
+    CONFIG_LIMITS = 0x800D
+    POSITION_OFFSET = 0x8010
+    MASK_LIMIT_SW = 0x800A

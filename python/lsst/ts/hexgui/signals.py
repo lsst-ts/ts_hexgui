@@ -103,7 +103,7 @@ class SignalDrive(QtCore.QObject):
     # Copley drive status of [strut_0, strut_1, ..., strut_5]
     copley_status = QtCore.Signal(object)
 
-    # Input pin status of [strut_0, strut_1, ..., strut_5]
+    # Input pin status of [drive_0, drive_1, drive_2]
     input_pin = QtCore.Signal(object)
 
 

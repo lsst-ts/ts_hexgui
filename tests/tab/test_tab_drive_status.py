@@ -23,7 +23,7 @@ import asyncio
 import logging
 
 import pytest
-from lsst.ts.hexgui import NUM_STRUT, Model
+from lsst.ts.hexgui import NUM_DRIVE, NUM_STRUT, Model
 from lsst.ts.hexgui.tab import TabDriveStatus
 from lsst.ts.xml.enums import MTHexapod
 from PySide6.QtCore import Qt
@@ -57,7 +57,7 @@ async def test_set_signal_drive(widget: TabDriveStatus) -> None:
         [0xFFFF] * NUM_STRUT,
         [0xFFFF] * NUM_STRUT,
         [0xFFFFFFFF] * NUM_STRUT,
-        [0xE0] * NUM_STRUT,
+        [0x8020] * NUM_DRIVE,
     )
 
     # Sleep so the event loop can access CPU to handle the signal
@@ -95,7 +95,7 @@ async def test_set_signal_drive(widget: TabDriveStatus) -> None:
 
     # Not triggered
     widget.model.report_drive_status(
-        [0] * NUM_STRUT, [0] * NUM_STRUT, [0] * NUM_STRUT, [0] * NUM_STRUT
+        [0] * NUM_STRUT, [0] * NUM_STRUT, [0] * NUM_STRUT, [0] * NUM_DRIVE
     )
 
     # Sleep so the event loop can access CPU to handle the signal

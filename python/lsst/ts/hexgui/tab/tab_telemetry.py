@@ -38,14 +38,13 @@ from PySide6.QtWidgets import (
 )
 from qasync import asyncSlot
 
-from ..config import Config
 from ..constants import NUM_STRUT
 from ..model import Model
 from ..signals import (
     SignalApplicationStatus,
-    SignalConfig,
     SignalControl,
     SignalPosition,
+    SignalPower,
 )
 
 
@@ -107,62 +106,45 @@ class TabTelemetry(TabTemplate):
             "command_acceleration_3": create_label(),
             "command_acceleration_4": create_label(),
             "command_acceleration_5": create_label(),
-        }
-
-        self._configuration = {
-            "position_max_xy": create_label(),
-            "position_max_z": create_label(),
-            "position_min_z": create_label(),
-            "angle_max_xy": create_label(),
-            "angle_max_z": create_label(),
-            "angle_min_z": create_label(),
-            "linear_velocity_max_xy": create_label(),
-            "linear_velocity_max_z": create_label(),
-            "angular_velocity_max_xy": create_label(),
-            "angular_velocity_max_z": create_label(),
-            "strut_length_max": create_label(),
-            "strut_velocity_max": create_label(),
-            "strut_acceleration_max": create_label(),
-            "pivot_x": create_label(),
-            "pivot_y": create_label(),
-            "pivot_z": create_label(),
-            "drives_enabled": create_label(),
+            "current_0": create_label(),
+            "current_1": create_label(),
+            "current_2": create_label(),
+            "current_3": create_label(),
+            "current_4": create_label(),
+            "current_5": create_label(),
         }
 
         self._application_status = create_radio_indicators(15)
 
-        self.set_widget_and_layout(is_scrollable=True)
+        self.set_widget_and_layout()
 
         self._set_signal_application_status(
             self.model.signals["application_status"]  # type: ignore[arg-type]
         )
-        self._set_signal_config(self.model.signals["config"])  # type: ignore[arg-type]
         self._set_signal_control(
             self.model.signals["control"]  # type: ignore[arg-type]
         )
         self._set_signal_position(
             self.model.signals["position"]  # type: ignore[arg-type]
         )
+        self._set_signal_power(self.model.signals["power"])  # type: ignore[arg-type]
 
     def create_layout(self) -> QVBoxLayout:
 
         layout_telemetry = QVBoxLayout()
         layout_telemetry.addWidget(self._create_group_position())
-        layout_telemetry.addWidget(self._create_group_time())
+        layout_telemetry.addWidget(self._create_group_power())
 
         layout_control = QVBoxLayout()
         layout_control.addWidget(self._create_group_control_data())
 
-        layout_configuration = QVBoxLayout()
-        layout_configuration.addWidget(self._create_group_configuration())
-
         layout_application_status = QVBoxLayout()
+        layout_application_status.addWidget(self._create_group_time())
         layout_application_status.addWidget(self._create_group_application_status())
 
         layout = QHBoxLayout()
         layout.addLayout(layout_telemetry)
         layout.addLayout(layout_control)
-        layout.addLayout(layout_configuration)
         layout.addLayout(layout_application_status)
 
         return layout
@@ -207,67 +189,6 @@ class TabTelemetry(TabTemplate):
         """
         layout.addRow(" ", None)
 
-    def _create_group_configuration(self) -> QGroupBox:
-        """Create the group of configuration.
-
-        Returns
-        -------
-        `PySide6.QtWidgets.QGroupBox`
-            Group.
-        """
-
-        layout = QFormLayout()
-
-        layout.addRow("Position maximum xy:", self._configuration["position_max_xy"])
-        layout.addRow("Position maximum z:", self._configuration["position_max_z"])
-        layout.addRow("Position minimum z:", self._configuration["position_min_z"])
-
-        self.add_empty_row_to_form_layout(layout)
-
-        layout.addRow("Angle maximum xy:", self._configuration["angle_max_xy"])
-        layout.addRow("Angle maximum z:", self._configuration["angle_max_z"])
-        layout.addRow("Angle minimum z:", self._configuration["angle_min_z"])
-
-        self.add_empty_row_to_form_layout(layout)
-
-        layout.addRow(
-            "Linear velocity maximum xy:", self._configuration["linear_velocity_max_xy"]
-        )
-        layout.addRow(
-            "Linear velocity maximum z:", self._configuration["linear_velocity_max_z"]
-        )
-
-        self.add_empty_row_to_form_layout(layout)
-
-        layout.addRow(
-            "Angular velocity maximum xy:",
-            self._configuration["angular_velocity_max_xy"],
-        )
-        layout.addRow(
-            "Angular velocity maximum z:", self._configuration["angular_velocity_max_z"]
-        )
-
-        self.add_empty_row_to_form_layout(layout)
-
-        layout.addRow("Strut length maximum:", self._configuration["strut_length_max"])
-        layout.addRow(
-            "Strut velocity maximum:", self._configuration["strut_velocity_max"]
-        )
-        layout.addRow(
-            "Strut acceleration maximum:", self._configuration["strut_acceleration_max"]
-        )
-
-        self.add_empty_row_to_form_layout(layout)
-
-        for axis in ["x", "y", "z"]:
-            layout.addRow(f"Pivot {axis}:", self._configuration[f"pivot_{axis}"])
-
-        self.add_empty_row_to_form_layout(layout)
-
-        layout.addRow("Drives enabled:", self._configuration["drives_enabled"])
-
-        return create_group_box("Configuration Settings", layout)
-
     def _create_group_time(self) -> QGroupBox:
         """Create the group of time data.
 
@@ -283,6 +204,21 @@ class TabTelemetry(TabTemplate):
         )
 
         return create_group_box("Time Data", layout)
+
+    def _create_group_power(self) -> QGroupBox:
+        """Create the group of power data.
+
+        Returns
+        -------
+        `PySide6.QtWidgets.QGroupBox`
+            Group.
+        """
+
+        layout = QFormLayout()
+        for idx in range(NUM_STRUT):
+            layout.addRow(f"Current {idx}:", self._telemetry_strut[f"current_{idx}"])
+
+        return create_group_box("Power", layout)
 
     def _create_group_control_data(self) -> QGroupBox:
         """Create the group of control data.
@@ -412,80 +348,6 @@ class TabTelemetry(TabTemplate):
                 status & (1 << idx),
                 is_fault=(idx in faults),
             )
-
-    def _set_signal_config(self, signal: SignalConfig) -> None:
-        """Set the config signal.
-
-        Parameters
-        ----------
-        signal : `SignalConfig`
-            Signal.
-        """
-
-        signal.config.connect(self._callback_config)
-
-    @asyncSlot()
-    async def _callback_config(self, config: Config) -> None:
-        """Callback of the configuration.
-
-        Parameters
-        ----------
-        config : `Config`
-            Configuration.
-        """
-
-        self._configuration["position_max_xy"].setText(
-            f"{config.hexapod_position_xy_max} um"
-        )
-        self._configuration["position_max_z"].setText(
-            f"{config.hexapod_position_z_max} um"
-        )
-        self._configuration["position_min_z"].setText(
-            f"{config.hexapod_position_z_min} um"
-        )
-
-        self._configuration["angle_max_xy"].setText(
-            f"{config.hexapod_position_rxry_max} deg"
-        )
-        self._configuration["angle_max_z"].setText(
-            f"{config.hexapod_position_rz_max} deg"
-        )
-        self._configuration["angle_min_z"].setText(
-            f"{config.hexapod_position_rz_min} deg"
-        )
-
-        self._configuration["linear_velocity_max_xy"].setText(
-            f"{config.hexapod_linear_radial_velocity_max} um/sec"
-        )
-        self._configuration["linear_velocity_max_z"].setText(
-            f"{config.hexapod_linear_axial_velocity_max} um/sec"
-        )
-
-        self._configuration["angular_velocity_max_xy"].setText(
-            f"{config.hexapod_angular_radial_velocity_max} deg/sec"
-        )
-        self._configuration["angular_velocity_max_z"].setText(
-            f"{config.hexapod_angular_axial_velocity_max} deg/sec"
-        )
-
-        self._configuration["strut_length_max"].setText(
-            f"{config.strut_upper_position_max} um"
-        )
-        self._configuration["strut_velocity_max"].setText(
-            f"{config.strut_velocity_max} um/sec"
-        )
-        self._configuration["strut_acceleration_max"].setText(
-            f"{config.strut_acceleration_limit} um/sec^2"
-        )
-
-        self._configuration["pivot_x"].setText(f"{config.hexapod_pivot[0]} um")
-        self._configuration["pivot_y"].setText(f"{config.hexapod_pivot[1]} um")
-        self._configuration["pivot_z"].setText(f"{config.hexapod_pivot[2]} um")
-
-        color = Qt.green if config.drives_enabled else Qt.red
-        self._configuration["drives_enabled"].setText(
-            f"<font color='{color.name}'>{str(config.drives_enabled)}</font>"
-        )
 
     def _set_signal_control(self, signal: SignalControl) -> None:
         """Set the control signal.
@@ -622,3 +484,27 @@ class TabTelemetry(TabTemplate):
         self._telemetry_position["in_motion"].setText(
             f"<font color='{color.name}'>{str(in_motion)}</font>"
         )
+
+    def _set_signal_power(self, signal: SignalPower) -> None:
+        """Set the power signal.
+
+        Parameters
+        ----------
+        signal : `SignalPower`
+            Signal.
+        """
+
+        signal.current.connect(self._callback_current)
+
+    @asyncSlot()
+    async def _callback_current(self, currents: list[float]) -> None:
+        """Callback of the current.
+
+        Parameters
+        ----------
+        currents : `list` [`float`]
+            Currents of [strut_0, strut_1, ..., strut_5] in ampere.
+        """
+
+        for idx in range(NUM_STRUT):
+            self._telemetry_strut[f"current_{idx}"].setText(f"{currents[idx]:.6f} A")

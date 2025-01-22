@@ -21,11 +21,15 @@
 
 __all__ = ["ControlPanel"]
 
+import asyncio
+
 from lsst.ts.guitool import (
     ButtonStatus,
+    QMessageBoxAsync,
     create_double_spin_box,
     create_group_box,
     create_label,
+    run_command,
     set_button,
     update_button_color,
 )
@@ -42,10 +46,38 @@ from PySide6.QtWidgets import (
 )
 from qasync import asyncSlot
 
-from .constants import NUM_STRUT
-from .enums import CommandSource, MotionPattern, TriggerEnabledSubState, TriggerState
+from .constants import (
+    CAM_UV_MAX_DEG,
+    CAM_W_MAX_DEG,
+    CAM_W_MIN_DEG,
+    CAM_XY_MAX_MIC,
+    CAM_Z_MAX_MIC,
+    CAM_Z_MIN_MIC,
+    M2_UV_MAX_DEG,
+    M2_W_MAX_DEG,
+    M2_W_MIN_DEG,
+    M2_XY_MAX_MIC,
+    M2_Z_MAX_MIC,
+    M2_Z_MIN_MIC,
+    MAX_ACCEL_LIMIT,
+    MAX_ACTUATOR_RANGE_MIC,
+    MAX_ANGULAR_VEL_LIMIT,
+    MAX_LINEAR_VEL_LIMIT,
+    MAX_PIVOT_X_MIC,
+    MAX_PIVOT_Y_MIC,
+    MAX_PIVOT_Z_MIC,
+    NUM_STRUT,
+)
+from .enums import (
+    CommandCode,
+    CommandSource,
+    MotionPattern,
+    TriggerEnabledSubState,
+    TriggerState,
+)
 from .model import Model
-from .signals import SignalState
+from .signals import SignalConfig, SignalState
+from .structs import Config
 
 
 class ControlPanel(QWidget):
@@ -69,12 +101,7 @@ class ControlPanel(QWidget):
 
         self.model = model
 
-        self._indicator_fault = set_button(
-            "",
-            None,
-            is_indicator=True,
-            tool_tip="System is faulted or not.",
-        )
+        self._indicators = self._create_indicators()
         self._labels = {
             "source": create_label(),
             "state": create_label(),
@@ -84,13 +111,42 @@ class ControlPanel(QWidget):
         self._command_parameters = self._create_command_parameters()
         self._commands = self._create_commands()
 
-        self._buttons = self._create_buttons()
+        self._button_command = set_button(
+            "Send Command",
+            self._callback_send_command,
+            tool_tip="Send the command to the controller.",
+        )
 
         self.setLayout(self._create_layout())
 
         self._set_signal_state(self.model.signals["state"])  # type: ignore[arg-type]
+        self._set_signal_config(self.model.signals["config"])  # type: ignore[arg-type]
 
         self._set_default()
+
+    def _create_indicators(self) -> dict:
+        """Create the indicators.
+
+        Returns
+        -------
+        `dict`
+            Indicators.
+        """
+
+        return {
+            "fault": set_button(
+                "",
+                None,
+                is_indicator=True,
+                tool_tip="System is faulted or not.",
+            ),
+            "drive": set_button(
+                "",
+                None,
+                is_indicator=True,
+                tool_tip="Drive is on or not.",
+            ),
+        }
 
     def _create_command_parameters(
         self,
@@ -120,20 +176,164 @@ class ControlPanel(QWidget):
         for substate in TriggerEnabledSubState:
             enabled_substate.addItem(substate.name)
 
-        position_x = create_double_spin_box("um", decimal_displacement)
-        position_y = create_double_spin_box("um", decimal_displacement)
-        position_z = create_double_spin_box("um", decimal_displacement)
+        if self.model.hexapod_type == MTHexapod.SalIndex.CAMERA_HEXAPOD:
+            max_x = CAM_XY_MAX_MIC
+            min_x = -CAM_XY_MAX_MIC
 
-        position_rx = create_double_spin_box("deg", decimal_angle)
-        position_ry = create_double_spin_box("deg", decimal_angle)
-        position_rz = create_double_spin_box("deg", decimal_angle)
+            max_y = CAM_XY_MAX_MIC
+            min_y = -CAM_XY_MAX_MIC
 
-        strut0 = create_double_spin_box("um", decimal_displacement)
-        strut1 = create_double_spin_box("um", decimal_displacement)
-        strut2 = create_double_spin_box("um", decimal_displacement)
-        strut3 = create_double_spin_box("um", decimal_displacement)
-        strut4 = create_double_spin_box("um", decimal_displacement)
-        strut5 = create_double_spin_box("um", decimal_displacement)
+            max_z = CAM_Z_MAX_MIC
+            min_z = CAM_Z_MIN_MIC
+
+            max_rx = CAM_UV_MAX_DEG
+            min_rx = -CAM_UV_MAX_DEG
+
+            max_ry = CAM_UV_MAX_DEG
+            min_ry = -CAM_UV_MAX_DEG
+
+            max_rz = CAM_W_MAX_DEG
+            min_rz = CAM_W_MIN_DEG
+
+        else:
+            max_x = M2_XY_MAX_MIC
+            min_x = -M2_XY_MAX_MIC
+
+            max_y = M2_XY_MAX_MIC
+            min_y = -M2_XY_MAX_MIC
+
+            max_z = M2_Z_MAX_MIC
+            min_z = M2_Z_MIN_MIC
+
+            max_rx = M2_UV_MAX_DEG
+            min_rx = -M2_UV_MAX_DEG
+
+            max_ry = M2_UV_MAX_DEG
+            min_ry = -M2_UV_MAX_DEG
+
+            max_rz = M2_W_MAX_DEG
+            min_rz = M2_W_MIN_DEG
+
+        position_x = create_double_spin_box(
+            "um",
+            decimal_displacement,
+            maximum=max_x,
+            minimum=min_x,
+        )
+        position_y = create_double_spin_box(
+            "um",
+            decimal_displacement,
+            maximum=max_y,
+            minimum=min_y,
+        )
+        position_z = create_double_spin_box(
+            "um",
+            decimal_displacement,
+            maximum=max_z,
+            minimum=min_z,
+        )
+
+        position_rx = create_double_spin_box(
+            "deg",
+            decimal_angle,
+            maximum=max_rx,
+            minimum=min_rx,
+        )
+        position_ry = create_double_spin_box(
+            "deg",
+            decimal_angle,
+            maximum=max_ry,
+            minimum=min_ry,
+        )
+        position_rz = create_double_spin_box(
+            "deg",
+            decimal_angle,
+            maximum=max_rz,
+            minimum=min_rz,
+        )
+
+        strut_0 = create_double_spin_box(
+            "um",
+            decimal_displacement,
+            maximum=MAX_ACTUATOR_RANGE_MIC,
+            minimum=-MAX_ACTUATOR_RANGE_MIC,
+        )
+        strut_1 = create_double_spin_box(
+            "um",
+            decimal_displacement,
+            maximum=MAX_ACTUATOR_RANGE_MIC,
+            minimum=-MAX_ACTUATOR_RANGE_MIC,
+        )
+        strut_2 = create_double_spin_box(
+            "um",
+            decimal_displacement,
+            maximum=MAX_ACTUATOR_RANGE_MIC,
+            minimum=-MAX_ACTUATOR_RANGE_MIC,
+        )
+        strut_3 = create_double_spin_box(
+            "um",
+            decimal_displacement,
+            maximum=MAX_ACTUATOR_RANGE_MIC,
+            minimum=-MAX_ACTUATOR_RANGE_MIC,
+        )
+        strut_4 = create_double_spin_box(
+            "um",
+            decimal_displacement,
+            maximum=MAX_ACTUATOR_RANGE_MIC,
+            minimum=-MAX_ACTUATOR_RANGE_MIC,
+        )
+        strut_5 = create_double_spin_box(
+            "um",
+            decimal_displacement,
+            maximum=MAX_ACTUATOR_RANGE_MIC,
+            minimum=-MAX_ACTUATOR_RANGE_MIC,
+        )
+
+        pivot_x = create_double_spin_box(
+            "um",
+            decimal_displacement,
+            maximum=MAX_PIVOT_X_MIC,
+            minimum=-MAX_PIVOT_X_MIC,
+        )
+        pivot_y = create_double_spin_box(
+            "um",
+            decimal_displacement,
+            maximum=MAX_PIVOT_Y_MIC,
+            minimum=-MAX_PIVOT_Y_MIC,
+        )
+        pivot_z = create_double_spin_box(
+            "um",
+            decimal_displacement,
+            maximum=MAX_PIVOT_Z_MIC,
+            minimum=-MAX_PIVOT_Z_MIC,
+        )
+
+        linear_velocity_xy = create_double_spin_box(
+            "um/sec",
+            decimal_displacement,
+            maximum=MAX_LINEAR_VEL_LIMIT,
+        )
+        linear_velocity_z = create_double_spin_box(
+            "um/sec",
+            decimal_displacement,
+            maximum=MAX_LINEAR_VEL_LIMIT,
+        )
+        angular_velocity_rxry = create_double_spin_box(
+            "deg/sec",
+            decimal_angle,
+            maximum=MAX_ANGULAR_VEL_LIMIT,
+        )
+        angular_velocity_rz = create_double_spin_box(
+            "deg/sec",
+            decimal_angle,
+            maximum=MAX_ANGULAR_VEL_LIMIT,
+        )
+
+        acceleration = create_double_spin_box(
+            "um/sec^2",
+            decimal_displacement,
+            maximum=MAX_ACCEL_LIMIT,
+        )
 
         motion_pattern = QComboBox()
         for pattern in MotionPattern:
@@ -152,12 +352,20 @@ class ControlPanel(QWidget):
             "position_rx": position_rx,
             "position_ry": position_ry,
             "position_rz": position_rz,
-            "strut0": strut0,
-            "strut1": strut1,
-            "strut2": strut2,
-            "strut3": strut3,
-            "strut4": strut4,
-            "strut5": strut5,
+            "strut_0": strut_0,
+            "strut_1": strut_1,
+            "strut_2": strut_2,
+            "strut_3": strut_3,
+            "strut_4": strut_4,
+            "strut_5": strut_5,
+            "pivot_x": pivot_x,
+            "pivot_y": pivot_y,
+            "pivot_z": pivot_z,
+            "linear_velocity_xy": linear_velocity_xy,
+            "linear_velocity_z": linear_velocity_z,
+            "angular_velocity_rxry": angular_velocity_rxry,
+            "angular_velocity_rz": angular_velocity_rz,
+            "acceleration": acceleration,
             "motion_pattern": motion_pattern,
             "source": command_source,
         }
@@ -182,6 +390,10 @@ class ControlPanel(QWidget):
         command_set_pivot = QRadioButton("Set pivot", parent=self)
         command_commander = QRadioButton("Switch command source", parent=self)
         command_mask = QRadioButton("Mask limit switch", parent=self)
+        command_config_velocity = QRadioButton("Configure velocity", parent=self)
+        command_config_acceleration = QRadioButton(
+            "Configure acceleration", parent=self
+        )
 
         command_state.setToolTip("Transition the state.")
         command_enabled_substate.setToolTip("Transition the enabled sub-state.")
@@ -191,6 +403,12 @@ class ControlPanel(QWidget):
         command_set_pivot.setToolTip("Set the hexapod pivot position.")
         command_commander.setToolTip("Switch the command source (GUI or CSC).")
         command_mask.setToolTip("Temporarily mask the limit switches.")
+        command_config_velocity.setToolTip(
+            "Configure the maximum velocity for position and orientation."
+        )
+        command_config_acceleration.setToolTip(
+            "Configure the maximum acceleration for all struts."
+        )
 
         command_state.toggled.connect(self._callback_command)
         command_enabled_substate.toggled.connect(self._callback_command)
@@ -200,6 +418,8 @@ class ControlPanel(QWidget):
         command_set_pivot.toggled.connect(self._callback_command)
         command_commander.toggled.connect(self._callback_command)
         command_mask.toggled.connect(self._callback_command)
+        command_config_velocity.toggled.connect(self._callback_command)
+        command_config_acceleration.toggled.connect(self._callback_command)
 
         return {
             "state": command_state,
@@ -210,6 +430,8 @@ class ControlPanel(QWidget):
             "pivot": command_set_pivot,
             "commander": command_commander,
             "mask": command_mask,
+            "config_velocity": command_config_velocity,
+            "config_acceleration": command_config_acceleration,
         }
 
     @asyncSlot()
@@ -241,12 +463,12 @@ class ControlPanel(QWidget):
         elif self._commands["position_raw"].isChecked():
             self._enable_command_parameters(
                 [
-                    "strut0",
-                    "strut1",
-                    "strut2",
-                    "strut3",
-                    "strut4",
-                    "strut5",
+                    "strut_0",
+                    "strut_1",
+                    "strut_2",
+                    "strut_3",
+                    "strut_4",
+                    "strut_5",
                     "motion_pattern",
                 ]
             )
@@ -254,9 +476,9 @@ class ControlPanel(QWidget):
         elif self._commands["pivot"].isChecked():
             self._enable_command_parameters(
                 [
-                    "position_x",
-                    "position_y",
-                    "position_z",
+                    "pivot_x",
+                    "pivot_y",
+                    "pivot_z",
                 ]
             )
 
@@ -265,6 +487,19 @@ class ControlPanel(QWidget):
 
         elif self._commands["mask"].isChecked():
             self._enable_command_parameters([])
+
+        elif self._commands["config_velocity"].isChecked():
+            self._enable_command_parameters(
+                [
+                    "linear_velocity_xy",
+                    "linear_velocity_z",
+                    "angular_velocity_rxry",
+                    "angular_velocity_rz",
+                ]
+            )
+
+        elif self._commands["config_acceleration"].isChecked():
+            self._enable_command_parameters(["acceleration"])
 
     def _enable_command_parameters(self, enabled_parameters: list[str]) -> None:
         """Enable the command parameters.
@@ -278,48 +513,219 @@ class ControlPanel(QWidget):
         for name, value in self._command_parameters.items():
             value.setEnabled(name in enabled_parameters)
 
-    def _create_buttons(self) -> dict:
-        """Create the buttons.
-
-        Returns
-        -------
-        `dict`
-            Buttons. The key is the name of the button and the value is the
-            button.
-        """
-
-        send_command = set_button(
-            "Send Command",
-            self._callback_send_command,
-            tool_tip="Send the command to the controller.",
-        )
-
-        log_telemetry = set_button(
-            "Log Telemetry",
-            self._callback_log_telemetry,
-            is_checkable=True,
-            tool_tip="Log the telemetry.",
-        )
-
-        return {
-            "send_command": send_command,
-            "log_telemetry": log_telemetry,
-        }
-
     @asyncSlot()
     async def _callback_send_command(self) -> None:
         """Callback of the send-command button to command the controller."""
 
-        self.model.log.info("Send the command.")
+        # Check the dangerous commands
+        if await self._check_dangerous_commands():
+            return
 
-    @asyncSlot()
-    async def _callback_log_telemetry(self) -> None:
-        """Callback of the log-telemetry button to log the telemetry."""
+        # Check the connection status
+        if not await run_command(self.model.assert_is_connected):
+            return
 
-        if self._buttons["log_telemetry"].isChecked():
-            self.model.log.info("Log the telemetry.")
-        else:
-            self.model.log.info("Stop logging the telemetry.")
+        # Check the selected command
+        name = self._get_selected_command()
+
+        self.model.log.info(f"Send the command: {name}.")
+
+        # Command the controller
+        match name:
+            case "state":
+                trigger_state = TriggerState(
+                    self._command_parameters["state"].currentIndex()
+                )
+                command = self.model.make_command_state(trigger_state)
+
+            case "enabled_substate":
+                command = self.model.make_command_enabled_substate(
+                    TriggerEnabledSubState(
+                        self._command_parameters["enabled_substate"].currentIndex()
+                    ),
+                    self._get_motion_pattern(),
+                )
+
+            case "position":
+                command = self.model.make_command(
+                    CommandCode.POSITION_SET,
+                    param1=self._command_parameters["position_x"].value(),
+                    param2=self._command_parameters["position_y"].value(),
+                    param3=self._command_parameters["position_z"].value(),
+                    param4=self._command_parameters["position_rx"].value(),
+                    param5=self._command_parameters["position_ry"].value(),
+                    param6=self._command_parameters["position_rz"].value(),
+                )
+
+            case "position_offset":
+                command = self.model.make_command(
+                    CommandCode.POSITION_OFFSET,
+                    param1=self._command_parameters["position_x"].value(),
+                    param2=self._command_parameters["position_y"].value(),
+                    param3=self._command_parameters["position_z"].value(),
+                    param4=self._command_parameters["position_rx"].value(),
+                    param5=self._command_parameters["position_ry"].value(),
+                    param6=self._command_parameters["position_rz"].value(),
+                )
+
+            case "position_raw":
+                command = self.model.make_command(
+                    CommandCode.SET_RAW_STRUT,
+                    param1=self._command_parameters["strut_0"].value(),
+                    param2=self._command_parameters["strut_1"].value(),
+                    param3=self._command_parameters["strut_2"].value(),
+                    param4=self._command_parameters["strut_3"].value(),
+                    param5=self._command_parameters["strut_4"].value(),
+                    param6=self._command_parameters["strut_5"].value(),
+                )
+
+            case "pivot":
+                command = self.model.make_command(
+                    CommandCode.SET_PIVOT_POINT,
+                    param1=self._command_parameters["pivot_x"].value(),
+                    param2=self._command_parameters["pivot_y"].value(),
+                    param3=self._command_parameters["pivot_z"].value(),
+                )
+
+            case "commander":
+                command = self.model.make_command(
+                    CommandCode.CMD_SOURCE,
+                    param1=float(
+                        CommandSource(
+                            self._command_parameters["source"].currentIndex()
+                        ).value
+                    ),
+                )
+
+            case "mask":
+                command = self.model.make_command(CommandCode.MASK_LIMIT_SW)
+
+            case "config_velocity":
+                command = self.model.make_command(
+                    CommandCode.CONFIG_VEL,
+                    param1=self._command_parameters["linear_velocity_xy"].value(),
+                    param2=self._command_parameters["angular_velocity_rxry"].value(),
+                    param3=self._command_parameters["linear_velocity_z"].value(),
+                    param4=self._command_parameters["angular_velocity_rz"].value(),
+                )
+
+            case "config_acceleration":
+                command = self.model.make_command(
+                    CommandCode.CONFIG_ACCEL,
+                    param1=self._command_parameters["acceleration"].value(),
+                )
+
+            case _:
+                # Should not reach here
+                command = self.model.make_command(CommandCode.DEFAULT)
+                self.model.log.error(f"Unknown command: {name}.")
+
+        # Workaround the mypy check
+        assert self.model.client is not None
+
+        # For the state related command, there is some special thing to do.
+        if name == "state":
+            if trigger_state == TriggerState.Enable:
+                # Turn on the drives
+                await run_command(self.model.enable_drives, True)
+
+            elif trigger_state == TriggerState.ClearError:
+                # Clear twice in total
+                await run_command(self.model.client.run_command, command)
+                await asyncio.sleep(1.0)
+
+        # Send the command
+        await run_command(self.model.client.run_command, command)
+
+        # Turn off the drives when needed
+        if name == "state":
+            if trigger_state == TriggerState.StandBy:
+                await run_command(self.model.enable_drives, False)
+
+    async def _check_dangerous_commands(self) -> bool:
+        """Check the dangerous commands.
+
+        Returns
+        -------
+        `bool`
+            True if the dangerous command is selected and the user wants to
+            give up. False otherwise.
+        """
+
+        motion_pattern = self._get_motion_pattern()
+
+        dialog = None
+        if self._commands["position_raw"].isChecked():
+            dialog = self._create_dialog_warning("Raw position command")
+
+        elif motion_pattern == MotionPattern.Async:
+            dialog = self._create_dialog_warning("Asynchronous motion")
+
+        if dialog is not None:
+            result = await dialog.show()
+
+            if result == QMessageBoxAsync.Cancel:
+                return True
+
+        return False
+
+    def _get_motion_pattern(self) -> MotionPattern:
+        """Get the motion pattern.
+
+        Returns
+        -------
+        `MotionPattern`
+            Motion pattern.
+        """
+
+        return MotionPattern(self._command_parameters["motion_pattern"].currentIndex())
+
+    def _create_dialog_warning(self, title: str) -> QMessageBoxAsync:
+        """Create the warning dialog.
+
+        Parameters
+        ----------
+        title : `str`
+            Title of the dialog.
+
+        Returns
+        -------
+        dialog : `lsst.ts.guitool.QMessageBoxAsync`
+            Disconnect dialog.
+        """
+
+        dialog = QMessageBoxAsync()
+        dialog.setIcon(QMessageBoxAsync.Warning)
+        dialog.setWindowTitle(title)
+
+        dialog.setText(
+            "This may result in the damage to flexures. and should be used "
+            "only by qualified operators.\n\n"
+            "Do you want to continue the command?"
+        )
+
+        dialog.addButton(QMessageBoxAsync.Ok)
+        dialog.addButton(QMessageBoxAsync.Cancel)
+
+        # Block the user to interact with other running widgets
+        dialog.setModal(True)
+
+        return dialog
+
+    def _get_selected_command(self) -> str:
+        """Get the selected command.
+
+        Returns
+        -------
+        name : `str`
+            Selected command.
+        """
+
+        for name, commmand in self._commands.items():
+            if commmand.isChecked():
+                return name
+
+        return ""
 
     def _create_layout(self) -> QVBoxLayout:
         """Set the layout.
@@ -333,7 +739,6 @@ class ControlPanel(QWidget):
         layout = QVBoxLayout()
         layout.addWidget(self._create_group_summary())
         layout.addWidget(self._create_group_commands())
-        layout.addWidget(self._create_group_special_command())
 
         return layout
 
@@ -348,7 +753,8 @@ class ControlPanel(QWidget):
 
         layout = QFormLayout()
 
-        layout.addRow("Fault Status:", self._indicator_fault)
+        layout.addRow("Fault Status:", self._indicators["fault"])
+        layout.addRow("Drive Status:", self._indicators["drive"])
         layout.addRow("Command Source:", self._labels["source"])
 
         self.add_empty_row_to_form_layout(layout)
@@ -383,7 +789,7 @@ class ControlPanel(QWidget):
 
         layout = QVBoxLayout()
         layout.addLayout(layout_commands)
-        layout.addWidget(self._buttons["send_command"])
+        layout.addWidget(self._button_command)
 
         return create_group_box("Commands", layout)
 
@@ -423,6 +829,11 @@ class ControlPanel(QWidget):
         layout_parameters_1.addRow(
             "Motion pattern:", self._command_parameters["motion_pattern"]
         )
+        for axis in ["X", "Y", "Z"]:
+            layout_parameters_1.addRow(
+                f"Pivot {axis}:",
+                self._command_parameters[f"pivot_{axis.lower()}"],
+            )
 
         # Column 2
         layout_parameters_2 = QFormLayout()
@@ -437,29 +848,32 @@ class ControlPanel(QWidget):
         for idx in range(NUM_STRUT):
             layout_parameters_3.addRow(
                 f"Strut {idx}:",
-                self._command_parameters[f"strut{idx}"],
+                self._command_parameters[f"strut_{idx}"],
             )
+
+        # Column 4
+        layout_parameters_4 = QFormLayout()
+        layout_parameters_4.addRow(
+            "XY:", self._command_parameters["linear_velocity_xy"]
+        )
+        layout_parameters_4.addRow("Z:", self._command_parameters["linear_velocity_z"])
+        layout_parameters_4.addRow(
+            "RxRy:", self._command_parameters["angular_velocity_rxry"]
+        )
+        layout_parameters_4.addRow(
+            "Rz:", self._command_parameters["angular_velocity_rz"]
+        )
+        layout_parameters_4.addRow(
+            "Acceleration:", self._command_parameters["acceleration"]
+        )
 
         layout = QHBoxLayout()
         layout.addLayout(layout_parameters_1)
         layout.addLayout(layout_parameters_2)
         layout.addLayout(layout_parameters_3)
+        layout.addLayout(layout_parameters_4)
 
         return create_group_box("Command Parameters", layout)
-
-    def _create_group_special_command(self) -> QGroupBox:
-        """Create the group of special command.
-
-        Returns
-        -------
-        group : `PySide6.QtWidgets.QGroupBox`
-            Group.
-        """
-
-        layout = QVBoxLayout()
-        layout.addWidget(self._buttons["log_telemetry"])
-
-        return create_group_box("Special Command", layout)
 
     def _set_signal_state(self, signal: SignalState) -> None:
         """Set the state signal.
@@ -512,11 +926,11 @@ class ControlPanel(QWidget):
 
         # Set the text
         text = "Faulted" if is_fault else "Not Faulted"
-        self._indicator_fault.setText(text)
+        self._indicators["fault"].setText(text)
 
         # Set the color
         status = ButtonStatus.Error if is_fault else ButtonStatus.Normal
-        update_button_color(self._indicator_fault, QPalette.Button, status)
+        update_button_color(self._indicators["fault"], QPalette.Button, status)
 
     @asyncSlot()
     async def _callback_substate_enabled(self, substate: int) -> None:
@@ -536,3 +950,46 @@ class ControlPanel(QWidget):
         """Set the default values."""
 
         self._commands["state"].setChecked(True)
+
+    def _set_signal_config(self, signal: SignalConfig) -> None:
+        """Set the config signal.
+
+        Parameters
+        ----------
+        signal : `SignalConfig`
+            Signal.
+        """
+
+        signal.config.connect(self._callback_config)
+
+    @asyncSlot()
+    async def _callback_config(self, config: Config) -> None:
+        """Callback of the configuration.
+
+        Parameters
+        ----------
+        config : `Config`
+            Configuration.
+        """
+
+        for idx, axis in enumerate(["x", "y", "z"]):
+            self._command_parameters[f"pivot_{axis}"].setValue(config.pivot[idx])
+
+        self._update_drive_status(config.drives_enabled)
+
+    def _update_drive_status(self, is_on: bool) -> None:
+        """Update the drive status.
+
+        Parameters
+        ----------
+        is_on : `bool`
+            Is on or not.
+        """
+
+        # Set the text
+        text = "On" if is_on else "Off"
+        self._indicators["drive"].setText(text)
+
+        # Set the color
+        status = ButtonStatus.Normal if is_on else ButtonStatus.Default
+        update_button_color(self._indicators["drive"], QPalette.Button, status)

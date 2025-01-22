@@ -23,12 +23,15 @@ __all__ = ["Status"]
 
 from dataclasses import dataclass, field
 
-from .constants import NUM_STRUT
+from .constants import NUM_DRIVE, NUM_STRUT
 
 
 @dataclass
 class Status:
     """System status."""
+
+    # Telemetry timestamp
+    timestamp: float = 0.0
 
     # Command source (enum `CommandSource`)
     command_source: int = 0
@@ -46,4 +49,4 @@ class Status:
     status_word: list[int] = field(default_factory=lambda: [0] * NUM_STRUT)
     latching_fault: list[int] = field(default_factory=lambda: [0] * NUM_STRUT)
     copley_status: list[int] = field(default_factory=lambda: [0] * NUM_STRUT)
-    input_pin: list[int] = field(default_factory=lambda: [0] * NUM_STRUT)
+    input_pin: list[int] = field(default_factory=lambda: [0] * NUM_DRIVE)

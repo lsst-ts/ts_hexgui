@@ -1,5 +1,9 @@
 classDiagram
 
+namespace hexrotcomm {
+  class CommandTelemetryClient
+}
+
 namespace guitool {
   class ControlTabs
   class TabTemplate
@@ -16,6 +20,7 @@ MainWindow *-- ControlTabs
 MainWindow *-- ControlPanel
 MainWindow *-- TabSettings
 
+Model *-- CommandTelemetryClient
 Model *-- Status
 Model *-- SignalState : emit()
 Model *-- SignalApplicationStatus : emit()
@@ -28,7 +33,8 @@ Model ..> Config
 
 ControlPanel *-- Model
 ControlPanel --> SignalState : connect()
+ControlPanel --> SignalConfig : connect()
 
 TabSettings *-- Model
 
-ControlTabs "1" *-- "4" TabTemplate
+ControlTabs "1" *-- "5" TabTemplate

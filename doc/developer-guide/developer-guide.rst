@@ -37,6 +37,7 @@ hexgui
 * **ControlPanel** has the commands to control the controller.
 * **Config** is a data class that has the configuration details in the hexapod control system.
 * **Status** is a data class that has the current controller status.
+* **CommandTelemetryClient** is the controller to communicate with the low-level controller.
 
 The model–view–controller (MVC) architecture is used in this module.
 In this design, the view always shows the data sent from the model.
@@ -80,6 +81,7 @@ hexgui.tab
 * **TabSettings** shows the settings of GUI.
 * **TabTelemetry** shows the telemetry of controller.
 * **TabPower** shows the power status.
+* **TabConfig** shows the configuration.
 
 The class diagrams for each table class are listed below to give you the idea of class relationship.
 
@@ -122,6 +124,14 @@ hexgui.tab.Power
 
 .. mermaid:: ../uml/tab/class_tab_power.mmd
     :caption: Class diagram of TabPower class
+
+.. _lsst.ts.hexgui-modules_hexgui_tab_config:
+
+hexgui.tab.Config
+--------------------
+
+.. mermaid:: ../uml/tab/class_tab_config.mmd
+    :caption: Class diagram of TabConfig class
 
 .. _API:
 

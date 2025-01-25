@@ -54,7 +54,9 @@ async def test_callback_time_out(widget: TabPosition) -> None:
         if idx < 3:
             assert widget._figures["displacement"].get_points(idx)[-1].y() == position
         else:
-            assert widget._figures["angle"].get_points(idx - 3)[-1].y() == position
+            assert (
+                widget._figures["angle"].get_points(idx - 3)[-1].y() == position * 1e6
+            )
 
 
 @pytest.mark.asyncio

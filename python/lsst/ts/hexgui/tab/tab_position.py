@@ -114,7 +114,7 @@ class TabPosition(TabTemplate):
                 num_realtime,
                 "Data Point",
                 "Angle",
-                "Hexapod Angular Displacement (deg)",
+                "Hexapod Angular Displacement (micro deg)",
                 legends=["rx", "ry", "rz"],
                 num_lines=3,
                 is_realtime=True,
@@ -137,7 +137,8 @@ class TabPosition(TabTemplate):
             if idx < 3:
                 self._figures["displacement"].append_data(position, idx)
             else:
-                self._figures["angle"].append_data(position, idx - 3)
+                # Change to micro degree
+                self._figures["angle"].append_data(position * 1e6, idx - 3)
 
         self.check_duration_and_restart_timer(self._timer, self.model.duration_refresh)
 

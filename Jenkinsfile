@@ -3,6 +3,6 @@ DevelopPipeline(
     name: "ts_hexgui",
     module_name: "lsst.ts.hexgui",
     idl_names: [],
-    extra_packages: ["lsst-ts/ts_guitool"],
+    extra_packages: ["lsst-ts/ts_guitool", "lsst-ts/ts_hexrotcomm"],
     use_pyside6: true
 )

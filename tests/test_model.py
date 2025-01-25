@@ -26,9 +26,13 @@ from lsst.ts.hexgui import (
     NUM_DEGREE_OF_FREEDOM,
     NUM_DRIVE,
     NUM_STRUT,
+    CommandCode,
     CommandSource,
     Config,
     Model,
+    MotionPattern,
+    TriggerEnabledSubState,
+    TriggerState,
 )
 from lsst.ts.xml.enums import MTHexapod
 from pytestqt.qtbot import QtBot
@@ -43,6 +47,80 @@ def model() -> Model:
 
 def test_init(model: Model) -> None:
     assert len(model.signals) == 7
+
+
+def test_is_connected(model: Model) -> None:
+    assert model.is_connected() is False
+
+
+def test_is_in_motion(model: Model) -> None:
+
+    status_words = [0] * NUM_STRUT
+    assert model._is_in_motion(status_words) is False
+
+    status_words[0] = 0x4000
+    assert model._is_in_motion(status_words) is True
+
+
+def test_is_csc_commander(model: Model) -> None:
+
+    assert model.is_csc_commander() is False
+
+    model._status.command_source = CommandSource.CSC.value
+    assert model.is_csc_commander() is True
+
+
+def test_assert_is_connected(model: Model) -> None:
+
+    with pytest.raises(RuntimeError):
+        model.assert_is_connected()
+
+
+def test_make_command(model: Model) -> None:
+
+    command_code = CommandCode.ENABLE_DRIVES
+    command = model.make_command(
+        command_code,
+        param1=1.0,
+        param2=2.0,
+        param3=3.0,
+        param4=4.0,
+        param5=5.0,
+        param6=6.0,
+    )
+
+    assert command.COMMANDER == 1
+    assert command.code == command_code.value
+    assert command.param1 == 1.0
+    assert command.param2 == 2.0
+    assert command.param3 == 3.0
+    assert command.param4 == 4.0
+    assert command.param5 == 5.0
+    assert command.param6 == 6.0
+
+
+def test_make_command_state(model: Model) -> None:
+
+    values = [2.0, 3.0, 6.0]
+    for trigger_state, value in zip(TriggerState, values):
+        command = model.make_command_state(trigger_state)
+
+        assert command.COMMANDER == 1
+        assert command.code == CommandCode.SET_STATE.value
+        assert command.param1 == value
+
+
+def test_make_command_enabled_substate(model: Model) -> None:
+
+    values = [1.0, 3.0]
+    patterns = [MotionPattern.Async, MotionPattern.Sync]
+    for trigger_state, value, pattern in zip(TriggerEnabledSubState, values, patterns):
+        command = model.make_command_enabled_substate(trigger_state, pattern)
+
+        assert command.COMMANDER == 1
+        assert command.code == CommandCode.SET_ENABLED_SUBSTATE.value
+        assert command.param1 == value
+        assert command.param2 == float(pattern.value)
 
 
 def test_report_default(qtbot: QtBot, model: Model) -> None:
@@ -63,6 +141,8 @@ def test_report_default(qtbot: QtBot, model: Model) -> None:
         model.signals["position"].strut_position,
         model.signals["position"].strut_position_error,
         model.signals["position"].hexapod_position,
+        model.signals["power"].current,
+        model.signals["power"].voltage,
     ]
     with qtbot.waitSignals(signals, timeout=TIMEOUT):
         model.report_default()

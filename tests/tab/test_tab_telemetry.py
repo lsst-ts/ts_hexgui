@@ -23,7 +23,7 @@ import asyncio
 import logging
 
 import pytest
-from lsst.ts.hexgui import Config, Model
+from lsst.ts.hexgui import Model
 from lsst.ts.hexgui.tab import TabTelemetry
 from lsst.ts.xml.enums import MTHexapod
 from PySide6.QtCore import Qt
@@ -59,53 +59,6 @@ async def test_set_signal_application_status(widget: TabTelemetry) -> None:
             assert indicator.palette().color(QPalette.Base) == Qt.red
         else:
             assert indicator.palette().color(QPalette.Base) == Qt.green
-
-
-@pytest.mark.asyncio
-async def test_set_signal_config(widget: TabTelemetry) -> None:
-
-    config = Config(
-        1.1,
-        2.2,
-        3.3,
-        4.4,
-        5.5,
-        6.6,
-        7.7,
-        8.8,
-        9.9,
-        10.1,
-        11.1,
-        12.2,
-        13.3,
-        [14.4, 15.5, 16.6],
-        True,
-    )
-    widget.model.report_config(config)
-
-    # Sleep so the event loop can access CPU to handle the signal
-    await asyncio.sleep(1)
-
-    assert widget._configuration["position_max_xy"].text() == "8.8 um"
-    assert widget._configuration["position_max_z"].text() == "10.1 um"
-    assert widget._configuration["position_min_z"].text() == "9.9 um"
-    assert widget._configuration["angle_max_xy"].text() == "11.1 deg"
-    assert widget._configuration["angle_max_z"].text() == "13.3 deg"
-    assert widget._configuration["angle_min_z"].text() == "12.2 deg"
-    assert widget._configuration["linear_velocity_max_xy"].text() == "2.2 um/sec"
-    assert widget._configuration["linear_velocity_max_z"].text() == "3.3 um/sec"
-    assert widget._configuration["angular_velocity_max_xy"].text() == "4.4 deg/sec"
-    assert widget._configuration["angular_velocity_max_z"].text() == "5.5 deg/sec"
-    assert widget._configuration["strut_length_max"].text() == "6.6 um"
-    assert widget._configuration["strut_velocity_max"].text() == "7.7 um/sec"
-    assert widget._configuration["strut_acceleration_max"].text() == "1.1 um/sec^2"
-    assert widget._configuration["pivot_x"].text() == "14.4 um"
-    assert widget._configuration["pivot_y"].text() == "15.5 um"
-    assert widget._configuration["pivot_z"].text() == "16.6 um"
-    assert (
-        widget._configuration["drives_enabled"].text()
-        == "<font color='green'>True</font>"
-    )
 
 
 @pytest.mark.asyncio
@@ -177,3 +130,19 @@ async def test_set_signal_position(widget: TabTelemetry) -> None:
         widget._telemetry_position["in_motion"].text()
         == "<font color='green'>True</font>"
     )
+
+
+@pytest.mark.asyncio
+async def test_set_signal_power(widget: TabTelemetry) -> None:
+
+    widget.model.report_power([1.1, 2.2, 3.3, 4.4, 5.5, 6.6], [7.7, 8.8, 9.9])
+
+    # Sleep so the event loop can access CPU to handle the signal
+    await asyncio.sleep(1)
+
+    assert widget._telemetry_strut["current_0"].text() == "1.100000 A"
+    assert widget._telemetry_strut["current_1"].text() == "2.200000 A"
+    assert widget._telemetry_strut["current_2"].text() == "3.300000 A"
+    assert widget._telemetry_strut["current_3"].text() == "4.400000 A"
+    assert widget._telemetry_strut["current_4"].text() == "5.500000 A"
+    assert widget._telemetry_strut["current_5"].text() == "6.600000 A"

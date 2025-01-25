@@ -21,15 +21,22 @@
 
 __all__ = ["Model"]
 
+import asyncio
 import logging
 import typing
 
+from lsst.ts.hexrotcomm import Command, CommandTelemetryClient
 from lsst.ts.xml.enums import MTHexapod
 from PySide6.QtCore import Signal
 
-from .config import Config
-from .constants import NUM_DEGREE_OF_FREEDOM, NUM_STRUT
-from .enums import CommandSource
+from .constants import NUM_DEGREE_OF_FREEDOM, NUM_DRIVE, NUM_STRUT
+from .enums import (
+    CommandCode,
+    CommandSource,
+    MotionPattern,
+    TriggerEnabledSubState,
+    TriggerState,
+)
 from .signals import (
     SignalApplicationStatus,
     SignalConfig,
@@ -40,6 +47,7 @@ from .signals import (
     SignalState,
 )
 from .status import Status
+from .structs import Config, Telemetry
 
 
 class Model(object):
@@ -72,6 +80,10 @@ class Model(object):
         TCP/IP connection information.
     duration_refresh : `int`
         Duration to refresh the data in milliseconds.
+    signals : `dict`
+        Signals to emit the data.
+    client : `lsst.ts.hexrotcomm.CommandTelemetryClient` or None
+        Command and telemetry client. (the default is None)
     """
 
     def __init__(
@@ -109,6 +121,326 @@ class Model(object):
             "power": SignalPower(),
         }
 
+        self.client: CommandTelemetryClient | None = None
+
+    def is_connected(self) -> bool:
+        """Check if the client is connected.
+
+        Returns
+        -------
+        `bool`
+            True if the client is connected.
+        """
+
+        return (self.client is not None) and self.client.connected
+
+    async def connect(self) -> None:
+        """Connect to the low-level controller.
+
+        Raises
+        ------
+        `RuntimeError`
+            If the connection times out or is refused.
+        """
+
+        await self.disconnect()
+
+        try:
+            host = self.connection_information["host"]
+            port = self.connection_information["port"]
+            self.log.info(f"Connecting to {host}:{port}.")
+
+            self.client = CommandTelemetryClient(
+                log=self.log,
+                ConfigClass=Config,
+                TelemetryClass=Telemetry,
+                host=host,
+                port=port,
+                connect_callback=self.connect_callback,
+                config_callback=self.config_callback,
+                telemetry_callback=self.telemetry_callback,
+            )
+
+            await asyncio.wait_for(
+                self.client.start_task,
+                timeout=self.connection_information["timeout_connection"],  # type: ignore[arg-type]
+            )
+
+        except asyncio.TimeoutError:
+            raise RuntimeError("Timed out while connecting to the controller")
+
+        except ConnectionRefusedError:
+            raise RuntimeError("Connection refused by the controller.")
+
+        except Exception:
+            raise
+
+    async def disconnect(self) -> None:
+        """Disconnect from the low-level controller."""
+
+        if self.is_connected():
+            try:
+                # Workaround the mypy check
+                assert self.client is not None
+
+                await self.client.close()
+
+            except Exception:
+                self.log.exception("disconnect(): self.client.close() failed")
+
+        self.client = None
+
+    async def connect_callback(self, client: CommandTelemetryClient) -> None:
+        """Called when the client socket connects or disconnects.
+
+        Parameters
+        ----------
+        client : `lsst.ts.hexrotcomm.CommandTelemetryClient`
+            TCP/IP client.
+        """
+
+        if client.should_be_connected and not client.connected:
+            self.log.error("Lost connection to the low-level controller")
+
+        if client.connected:
+            self.log.info("Connected to the low-level controller")
+        else:
+            self.log.info("Disconnected from the low-level controller")
+
+    async def config_callback(self, client: CommandTelemetryClient) -> None:
+        """Called when the TCP/IP controller outputs configuration.
+
+        Parameters
+        ----------
+        client : `lsst.ts.hexrotcomm.CommandTelemetryClient`
+            TCP/IP client.
+        """
+
+        self.report_config(client.config)
+
+    async def telemetry_callback(self, client: CommandTelemetryClient) -> None:
+        """Called when the TCP/IP controller outputs telemetry.
+
+        Parameters
+        ----------
+        client : `lsst.ts.hexrotcomm.CommandTelemetryClient`
+            TCP/IP client.
+        """
+
+        telemetry = client.telemetry
+        M_TO_UM = 1e6
+
+        # Report the control data
+        timestamp = client.header.tai_sec + client.header.tai_nsec * 1e-9
+        self.report_control_data(
+            [value * M_TO_UM for value in telemetry.strut_commanded_accel],
+            [value * M_TO_UM for value in telemetry.strut_commanded_delta_pos_m],
+            timestamp - self._status.timestamp,
+        )
+        self._status.timestamp = timestamp
+
+        # Report the position
+        self.report_position(
+            [telemetry.estimated_posfiltvel[idx].pos for idx in range(NUM_STRUT)],
+            telemetry.strut_pos_error,
+            list(telemetry.measured_xyz) + list(telemetry.measured_uvw),
+            self._is_in_motion(telemetry.status_word),
+        )
+
+        # Report the power
+        self.report_power(telemetry.motor_current, telemetry.bus_voltage)
+
+        # Report the state
+
+        # See ts_hexapod_controller repository for the enum value:
+        # AppStatus_CommandByCsc = 0x400
+        command_source = (
+            CommandSource.CSC
+            if (telemetry.application_status & 0x400)
+            else CommandSource.GUI
+        )
+        self.report_state(
+            command_source,
+            MTHexapod.ControllerState(telemetry.state),
+            MTHexapod.EnabledSubstate(telemetry.enabled_substate),
+        )
+
+        # Report application status
+        self.report_application_status(telemetry.application_status)
+
+        # Report drive status
+        self.report_drive_status(
+            list(telemetry.status_word),
+            list(telemetry.latching_fault_status_register),
+            list(telemetry.copley_fault_status_register),
+            list(telemetry.input_pin_states),
+        )
+
+    def _is_in_motion(self, status_words: list[int]) -> bool:
+        """The hexapod is in motion or not.
+
+        Parameters
+        ----------
+        status_words : `list` [`int`]
+            Status words of [strut_0, strut_1, ..., strut_5].
+
+        Returns
+        -------
+        `bool`
+            True if the hexapod is in motion. False otherwise.
+        """
+
+        status_total = 0
+        for status_word in status_words:
+            status_total |= status_word
+
+        # 0x4000 is bit 14 (Amplifier move status)
+        return bool(status_total & 0x4000)
+
+    def is_csc_commander(self) -> bool:
+        """Commandable SAL component (CSC) is the commander or not.
+
+        Returns
+        -------
+        `bool`
+            True if the CSC is the commander. False otherwise.
+        """
+        return self._status.command_source == CommandSource.CSC
+
+    async def enable_drives(self, status: bool, time: float = 1.0) -> None:
+        """Enable the drives.
+
+        Parameters
+        ----------
+        status : `bool`
+            True if enable the drives. Otherwise, False.
+        time : `float`, optional
+            Sleep time in second. (the default is 1.0)
+        """
+
+        self.assert_is_connected()
+
+        # Workaround the mypy check
+        assert self.client is not None
+
+        command = self.make_command(CommandCode.ENABLE_DRIVES, param1=float(status))
+        await self.client.run_command(command)
+
+        await asyncio.sleep(time)
+
+    def assert_is_connected(self) -> None:
+        """Assert that the client is connected.
+
+        Raises
+        ------
+        `RuntimeError`
+            When the client is not connected.
+        """
+
+        if not self.is_connected():
+            raise RuntimeError("Not connected to the low-level controller")
+
+    def make_command(
+        self,
+        code: CommandCode,
+        param1: float = 0.0,
+        param2: float = 0.0,
+        param3: float = 0.0,
+        param4: float = 0.0,
+        param5: float = 0.0,
+        param6: float = 0.0,
+    ) -> Command:
+        """Make a command from the command identifier and keyword arguments.
+
+        Parameters
+        ----------
+        code : enum `CommandCode`
+            Command to run.
+        param1, param2, param3, param4, param5, param6 : `double`, optional
+            Command parameters. The meaning of these parameters
+            depends on the command code.
+
+        Returns
+        -------
+        command : `lsst.ts.hexrotcomm.Command`
+            The command. Note that the `counter` field is 0;
+            it is set by `CommandTelemetryClient.run_command`.
+        """
+
+        command = Command()
+
+        # Set the commander to be GUI. See the enum "Commander" in
+        # ts_hexrotpxicom.
+        command.COMMANDER = 1
+
+        command.code = code.value
+        command.param1 = param1
+        command.param2 = param2
+        command.param3 = param3
+        command.param4 = param4
+        command.param5 = param5
+        command.param6 = param6
+
+        self.log.debug(
+            f"New command: {code.name} ({hex(code.value)}): {param1=}, "
+            f"{param2=}, {param3=}, {param4=}, {param5=}, {param6=}"
+        )
+
+        return command
+
+    def make_command_state(self, trigger_state: TriggerState) -> Command:
+        """Make the state command.
+
+        Parameters
+        ----------
+        trigger_state : enum `TriggerState`
+            Trigger state.
+
+        Returns
+        -------
+        `lsst.ts.hexrotcomm.Command`
+            State command.
+        """
+
+        if trigger_state == TriggerState.Enable:
+            return self.make_command(CommandCode.SET_STATE, param1=2.0)
+        elif trigger_state == TriggerState.StandBy:
+            return self.make_command(CommandCode.SET_STATE, param1=3.0)
+        else:
+            # Should be the TriggerState.ClearError
+            return self.make_command(CommandCode.SET_STATE, param1=6.0)
+
+    def make_command_enabled_substate(
+        self,
+        trigger_enabled_substate: TriggerEnabledSubState,
+        motion_pattern: MotionPattern,
+    ) -> Command:
+        """Make the enabled substate command.
+
+        Parameters
+        ----------
+        trigger_enabled_substate : enum `TriggerEnabledSubState`
+            Trigger enabled substate.
+        motion_pattern : enum `MotionPattern`
+            Motion pattern, synchronous or asynchronous. This is only used
+            in the move command.
+
+        Returns
+        -------
+        `lsst.ts.hexrotcomm.Command`
+            Enabled substate command.
+        """
+
+        if trigger_enabled_substate == TriggerEnabledSubState.Move:
+            return self.make_command(
+                CommandCode.SET_ENABLED_SUBSTATE,
+                param1=1.0,
+                param2=float(motion_pattern.value),
+            )
+        else:
+            # Should be the TriggerEnabledSubState.Stop
+            return self.make_command(CommandCode.SET_ENABLED_SUBSTATE, param1=3.0)
+
     def report_default(self) -> None:
         """Report the default status."""
 
@@ -127,7 +459,7 @@ class Model(object):
         signal_drive.status_word.emit([0] * NUM_STRUT)  # type: ignore[attr-defined]
         signal_drive.latching_fault.emit([0] * NUM_STRUT)  # type: ignore[attr-defined]
         signal_drive.copley_status.emit([0] * NUM_STRUT)  # type: ignore[attr-defined]
-        signal_drive.input_pin.emit([0] * NUM_STRUT)  # type: ignore[attr-defined]
+        signal_drive.input_pin.emit([0x300C0] * NUM_DRIVE)  # type: ignore[attr-defined]
 
         signal_application_status = self.signals["application_status"]
         signal_application_status.status.emit(0)  # type: ignore[attr-defined]
@@ -137,6 +469,7 @@ class Model(object):
         self.report_position(
             [0.0] * NUM_STRUT, [0.0] * NUM_STRUT, [0.0] * NUM_DEGREE_OF_FREEDOM, False
         )
+        self.report_power([0.0] * NUM_STRUT, [0.0] * NUM_DRIVE)
 
     def report_config(self, config: Config) -> None:
         """Report the configuration.
@@ -278,6 +611,8 @@ class Model(object):
             signal.emit(value)
             setattr(self._status, field, value)
 
+            self.log.info(f"Update system status: {field} = {value}")
+
     def report_application_status(self, status: int) -> None:
         """Report the application status.
 
@@ -311,7 +646,7 @@ class Model(object):
         copley_status : `list` [`int`]
             Copley drive status of [strut_0, strut_1, ..., strut_5].
         input_pin : `list` [`int`]
-            Input pin status of [strut_0, strut_1, ..., strut_5].
+            Input pin status of [drive_0, drive_1, drive_2].
         """
 
         signal = self.signals["drive"]

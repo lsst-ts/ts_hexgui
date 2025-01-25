@@ -322,9 +322,9 @@ class TabDriveStatus(TabTemplate):
         """
 
         names = [
-            "Bit 6 - Safety interlock OK:",
-            "Bit 7 - Extend limit switch hit:",
-            "Bit 8 - Retract limit switch hit:",
+            "Bit 5/15- Safety interlock OK:",
+            "Bit 6/16 - Extend limit switch hit:",
+            "Bit 7/17 - Retract limit switch hit:",
         ]
         return create_group_box(
             "Input Pin State (0x219A)",
@@ -375,6 +375,7 @@ class TabDriveStatus(TabTemplate):
                 warnings,
                 default_errors,
                 default_if_is_triggered,
+                [],
             )
 
     def _update_boolean_indicators(
@@ -385,6 +386,7 @@ class TabDriveStatus(TabTemplate):
         warnings: list[int],
         default_errors: list[int],
         default_if_is_triggered: list[int],
+        reversed_bits: list[int],
     ) -> None:
         """Update the boolean indicators.
 
@@ -402,10 +404,13 @@ class TabDriveStatus(TabTemplate):
             Default errors.
         default_if_is_triggered : `list` [`int`]
             Set the default status if the indicator is triggered.
+        reversed_bits : `list` [`int`]
+            Reversed bits to reverse the triggered status.
         """
 
         for idx, indicator in enumerate(indicators):
-            is_triggered = status & (1 << idx)
+            is_bit_on = status & (1 << idx)
+            is_triggered = (not is_bit_on) if (idx in reversed_bits) else is_bit_on
             update_boolean_indicator_status(
                 indicator,
                 is_triggered,
@@ -436,6 +441,7 @@ class TabDriveStatus(TabTemplate):
                 [],
                 [],
                 [],
+                [],
             )
 
     @asyncSlot()
@@ -458,6 +464,7 @@ class TabDriveStatus(TabTemplate):
                 warnings,
                 [],
                 [],
+                [],
             )
 
     @asyncSlot()
@@ -467,19 +474,43 @@ class TabDriveStatus(TabTemplate):
         Parameters
         ----------
         input_pin : `list` [`int`]
-            Input pin status of [strut_0, strut_1, ..., strut_5].
+            Input pin status of [drive_0, drive_1, drive_2].
         """
 
-        bit_offset = 5
+        # Drive 0 has the strut 0 and 1. Drive 1 has the strut 2 and 3.
+        # Drive 2 has the strut 4 and 5.
+
+        # For each drive, the pin 6, 7 and 8 are used for the first strut. And
+        # the pin 16, 17 and 18 are used for the second strut.
+
+        # Pin 6, 7, 8 -> bit 5, 6, 7
+        # Pin 16, 17, 18 -> bit 15, 16, 17
+
+        bit_offset_first = 5
+        bit_offset_second = 15
 
         faults = [1, 2]
         default_errors = [0]
+
+        # If there is the hit of limit switch, the pin state is "Low" instead
+        # of "High".
+        reversed_bits = [1, 2]
         for idx, status in enumerate(input_pin):
             self._update_boolean_indicators(
-                status >> bit_offset,
-                self._list_input_pin_state[f"strut_{idx}"],
+                status >> bit_offset_first,
+                self._list_input_pin_state[f"strut_{2 * idx}"],
                 faults,
                 [],
                 default_errors,
                 [],
+                reversed_bits,
+            )
+            self._update_boolean_indicators(
+                status >> bit_offset_second,
+                self._list_input_pin_state[f"strut_{2 * idx + 1}"],
+                faults,
+                [],
+                default_errors,
+                [],
+                reversed_bits,
             )

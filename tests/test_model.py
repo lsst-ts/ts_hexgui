@@ -19,10 +19,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import asyncio
 import logging
 
 import pytest
+import pytest_asyncio
+from lsst.ts import salobj
 from lsst.ts.hexgui import (
+    CAM_UV_MAX_DEG,
+    CAM_W_MAX_DEG,
+    CAM_W_MIN_DEG,
+    CAM_XY_MAX_MIC,
+    CAM_Z_MAX_MIC,
+    CAM_Z_MIN_MIC,
     NUM_DEGREE_OF_FREEDOM,
     NUM_DRIVE,
     NUM_STRUT,
@@ -45,12 +54,47 @@ def model() -> Model:
     return Model(logging.getLogger(), MTHexapod.SalIndex.CAMERA_HEXAPOD)
 
 
-def test_init(model: Model) -> None:
-    assert len(model.signals) == 7
+@pytest_asyncio.fixture
+async def model_async() -> Model:
+    async with Model(
+        logging.getLogger(), MTHexapod.SalIndex.CAMERA_HEXAPOD, is_simulation_mode=True
+    ) as model_sim:
+        await model_sim.connect()
+
+        yield model_sim
+
+
+@pytest.mark.asyncio
+async def test_init(model_async: Model) -> None:
+    assert len(model_async.signals) == 7
+
+    assert tuple(model_async._mock_ctrl.config.pos_limits) == (
+        CAM_XY_MAX_MIC,
+        CAM_Z_MIN_MIC,
+        CAM_Z_MAX_MIC,
+        CAM_UV_MAX_DEG,
+        CAM_W_MIN_DEG,
+        CAM_W_MAX_DEG,
+    )
+    assert model_async._mock_ctrl._commanded_position is None
+
+
+@pytest.mark.asyncio
+async def test_connect(model_async: Model) -> None:
+
+    assert model_async.is_connected() is True
 
 
 def test_is_connected(model: Model) -> None:
     assert model.is_connected() is False
+
+
+@pytest.mark.asyncio
+async def test_disconnect(model_async: Model) -> None:
+
+    await model_async.disconnect()
+
+    assert model_async.is_connected() is False
 
 
 def test_is_in_motion(model: Model) -> None:
@@ -267,3 +311,215 @@ def test_report_drive_status(qtbot: QtBot, model: Model) -> None:
         )
 
     assert model._status.input_pin == [4] * NUM_STRUT
+
+
+@pytest.mark.asyncio
+async def test_command_move_point_to_point(model_async: Model) -> None:
+
+    await _enable_controller(model_async)
+    await _move_point_to_point(
+        model_async,
+        param1=100.0,
+        param2=200.0,
+        param3=300.0,
+        param4=0.1,
+        param5=-0.1,
+        param6=0.005,
+    )
+
+    await asyncio.sleep(1.0)
+
+    assert tuple(model_async._mock_ctrl.telemetry.measured_xyz) == pytest.approx(
+        (100.0, 200.0, 300.0)
+    )
+    assert tuple(model_async._mock_ctrl.telemetry.measured_uvw) == pytest.approx(
+        (0.1, -0.1, 0.005)
+    )
+
+
+@pytest.mark.asyncio
+async def _enable_controller(model_async: Model) -> None:
+
+    command = model_async.make_command_state(TriggerState.Enable)
+    await model_async.client.run_command(command)
+    await asyncio.sleep(1.0)
+
+
+@pytest.mark.asyncio
+async def _move_point_to_point(
+    model_async: Model,
+    param1: float = 0.0,
+    param2: float = 0.0,
+    param3: float = 0.0,
+    param4: float = 0.0,
+    param5: float = 0.0,
+    param6: float = 0.0,
+) -> None:
+
+    command_position_set = model_async.make_command(
+        CommandCode.POSITION_SET,
+        param1=param1,
+        param2=param2,
+        param3=param3,
+        param4=param4,
+        param5=param5,
+        param6=param6,
+    )
+    await model_async.client.run_command(command_position_set)
+
+    command_move = model_async.make_command_enabled_substate(
+        TriggerEnabledSubState.Move,
+        MotionPattern.Sync,
+    )
+    await model_async.client.run_command(command_move)
+
+
+@pytest.mark.asyncio
+async def test_command_stop(model_async: Model) -> None:
+
+    await _enable_controller(model_async)
+    await _move_point_to_point(model_async, param3=12000.0)
+
+    await asyncio.sleep(0.5)
+
+    assert (
+        model_async._status.substate_enabled
+        == MTHexapod.EnabledSubstate.MOVING_POINT_TO_POINT.value
+    )
+
+    command_stop = model_async.make_command_enabled_substate(
+        TriggerEnabledSubState.Stop,
+        MotionPattern.Sync,
+    )
+    await model_async.client.run_command(command_stop)
+
+    await asyncio.sleep(1.0)
+
+    assert (
+        model_async._status.substate_enabled
+        == MTHexapod.EnabledSubstate.STATIONARY.value
+    )
+    assert 0 < model_async._mock_ctrl.telemetry.measured_xyz[2] < 10000.0
+
+
+@pytest.mark.asyncio
+async def test_command_position_set(model_async: Model) -> None:
+
+    await _enable_controller(model_async)
+
+    command = model_async.make_command(
+        CommandCode.POSITION_SET,
+        param1=100.0,
+        param2=200.0,
+        param3=300.0,
+        param4=0.1,
+        param5=-0.1,
+        param6=0.005,
+    )
+    await model_async.client.run_command(command)
+
+    assert model_async._mock_ctrl._commanded_position == [
+        100.0,
+        200.0,
+        300.0,
+        0.1,
+        -0.1,
+        0.005,
+    ]
+
+
+@pytest.mark.asyncio
+async def test_command_position_offset(model_async: Model) -> None:
+
+    await _enable_controller(model_async)
+
+    command = model_async.make_command(
+        CommandCode.POSITION_OFFSET,
+        param1=100.0,
+        param2=200.0,
+        param3=300.0,
+        param4=0.1,
+        param5=-0.1,
+        param6=0.005,
+    )
+    await model_async.client.run_command(command)
+
+    assert model_async._mock_ctrl._commanded_position == [
+        100.0,
+        200.0,
+        300.0,
+        0.1,
+        -0.1,
+        0.005,
+    ]
+
+
+@pytest.mark.asyncio
+async def test_command_set_raw_strut(model_async: Model) -> None:
+
+    command = model_async.make_command(CommandCode.SET_RAW_STRUT)
+    with pytest.raises(salobj.ExpectedError):
+        await model_async.client.run_command(command)
+
+
+@pytest.mark.asyncio
+async def test_command_set_pivot_point(model_async: Model) -> None:
+
+    await _enable_controller(model_async)
+
+    command = model_async.make_command(
+        CommandCode.SET_PIVOT_POINT, param1=1.0, param2=2.0, param3=3.0
+    )
+    await model_async.client.run_command(command)
+
+    assert tuple(model_async._mock_ctrl.config.pivot) == (1.0, 2.0, 3.0)
+
+
+@pytest.mark.asyncio
+async def test_command_mask_limit_switch(model_async: Model) -> None:
+
+    command = model_async.make_command(CommandCode.MASK_LIMIT_SW)
+    with pytest.raises(salobj.ExpectedError):
+        await model_async.client.run_command(command)
+
+
+@pytest.mark.asyncio
+async def test_command_switch_command_source(model_async: Model) -> None:
+
+    command = model_async.make_command(CommandCode.CMD_SOURCE, param1=1.0)
+    await model_async.client.run_command(command)
+
+    await asyncio.sleep(1.0)
+
+    assert model_async._mock_ctrl._is_csc_commander is True
+    assert model_async._status.command_source == CommandSource.CSC.value
+
+
+@pytest.mark.asyncio
+async def test_command_config_accel(model_async: Model) -> None:
+
+    await _enable_controller(model_async)
+
+    # In range
+    command = model_async.make_command(CommandCode.CONFIG_ACCEL, param1=1.0)
+    await model_async.client.run_command(command)
+
+    assert model_async._mock_ctrl.config.acceleration_strut == 1.0
+
+    # Out of range
+    command_out = model_async.make_command(CommandCode.CONFIG_ACCEL, param1=1000.0)
+    with pytest.raises(salobj.ExpectedError):
+        await model_async.client.run_command(command_out)
+
+
+@pytest.mark.asyncio
+async def test_command_config_vel(model_async: Model) -> None:
+
+    await _enable_controller(model_async)
+
+    command = model_async.make_command(
+        CommandCode.CONFIG_VEL, param1=0.01, param2=0.02, param3=0.03, param4=0.04
+    )
+    await model_async.client.run_command(command)
+
+    assert tuple(model_async._mock_ctrl.config.vel_limits) == (0.01, 0.03, 0.02, 0.04)

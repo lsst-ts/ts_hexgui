@@ -207,6 +207,10 @@ async def test_set_signal_config(widget: ControlPanel) -> None:
         config.pivot[idx] = float(idx + 1)
     config.drives_enabled = True
 
+    for idx in range(4):
+        config.vel_limits[idx] = 0.01 * float(idx + 1)
+    config.acceleration_strut = 0.05
+
     widget.model.report_config(config)
 
     # Sleep so the event loop can access CPU to handle the signal
@@ -218,6 +222,13 @@ async def test_set_signal_config(widget: ControlPanel) -> None:
 
     assert widget._indicators["drive"].text() == "On"
     assert widget._indicators["drive"].palette().color(QPalette.Button) == Qt.green
+
+    assert widget._command_parameters["linear_velocity_xy"].value() == 0.01
+    assert widget._command_parameters["linear_velocity_z"].value() == 0.02
+    assert widget._command_parameters["angular_velocity_rxry"].value() == 0.03
+    assert widget._command_parameters["angular_velocity_rz"].value() == 0.04
+
+    assert widget._command_parameters["acceleration"].value() == 0.05
 
 
 def test_update_drive_status(widget: ControlPanel) -> None:

@@ -23,9 +23,11 @@ __all__ = ["Model"]
 
 import asyncio
 import logging
+import types
 import typing
 
 from lsst.ts.hexrotcomm import Command, CommandTelemetryClient
+from lsst.ts.tcpip import LOCALHOST_IPV4
 from lsst.ts.xml.enums import MTHexapod
 from PySide6.QtCore import Signal
 
@@ -37,6 +39,7 @@ from .enums import (
     TriggerEnabledSubState,
     TriggerState,
 )
+from .mock_controller import MockController
 from .signals import (
     SignalApplicationStatus,
     SignalConfig,
@@ -57,10 +60,10 @@ class Model(object):
     ----------
     log : `logging.Logger`
         A logger.
-    hexapod_type : `MTHexapod.SalIndex`
+    hexapod_type : enum `MTHexapod.SalIndex`
         The hexapod type.
     host : `str`, optional
-        Host address. (the default is "localhost")
+        Host address. (the default is "LOCALHOST_IPV4")
     port : `int`, optional
         Port to connect. (the default is 5560)
     timeout_connection : `float`, optional
@@ -90,7 +93,7 @@ class Model(object):
         self,
         log: logging.Logger,
         hexapod_type: MTHexapod.SalIndex,
-        host: str = "localhost",
+        host: str = LOCALHOST_IPV4,
         port: int = 5560,
         timeout_connection: float = 10.0,
         is_simulation_mode: bool = False,
@@ -107,6 +110,8 @@ class Model(object):
         }
 
         self._is_simulation_mode = is_simulation_mode
+        self._mock_ctrl: MockController | None = None
+
         self.duration_refresh = duration_refresh
 
         self._status = Status()
@@ -146,8 +151,20 @@ class Model(object):
         await self.disconnect()
 
         try:
-            host = self.connection_information["host"]
-            port = self.connection_information["port"]
+            if self._is_simulation_mode:
+                self._mock_ctrl = MockController(
+                    self.log,
+                    self.hexapod_type,
+                )
+                await self._mock_ctrl.start_task
+
+                host = LOCALHOST_IPV4
+                port = self._mock_ctrl.port
+
+            else:
+                host = self.connection_information["host"]
+                port = self.connection_information["port"]
+
             self.log.info(f"Connecting to {host}:{port}.")
 
             self.client = CommandTelemetryClient(
@@ -178,6 +195,7 @@ class Model(object):
     async def disconnect(self) -> None:
         """Disconnect from the low-level controller."""
 
+        # Close the client
         if self.is_connected():
             try:
                 # Workaround the mypy check
@@ -189,6 +207,16 @@ class Model(object):
                 self.log.exception("disconnect(): self.client.close() failed")
 
         self.client = None
+
+        # Close the mock controller
+        if self._mock_ctrl is not None:
+            try:
+                await self._mock_ctrl.close()
+
+            except Exception:
+                self.log.exception("disconnect: self._mock_ctrl.close() failed")
+
+        self._mock_ctrl = None
 
     async def connect_callback(self, client: CommandTelemetryClient) -> None:
         """Called when the client socket connects or disconnects.
@@ -233,8 +261,8 @@ class Model(object):
         # Report the control data
         timestamp = client.header.tai_sec + client.header.tai_nsec * 1e-9
         self.report_control_data(
-            [value * M_TO_UM for value in telemetry.strut_commanded_accel],
-            [value * M_TO_UM for value in telemetry.strut_commanded_delta_pos_m],
+            list(telemetry.strut_commanded_accel),
+            [value * M_TO_UM for value in telemetry.strut_commanded_final_pos],
             timestamp - self._status.timestamp,
         )
         self._status.timestamp = timestamp
@@ -663,3 +691,18 @@ class Model(object):
         self._compare_status_and_report(
             "input_pin", input_pin, signal.input_pin  # type: ignore[attr-defined]
         )
+
+    async def __aenter__(self) -> object:
+        """This is an overridden function to support the asynchronous context
+        manager."""
+        return self
+
+    async def __aexit__(
+        self,
+        type: typing.Type[BaseException] | None,
+        value: BaseException | None,
+        traceback: types.TracebackType | None,
+    ) -> None:
+        """This is an overridden function to support the asynchronous context
+        manager."""
+        await self.disconnect()

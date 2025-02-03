@@ -64,7 +64,7 @@ class MainWindow(QMainWindow):
         Is outputting the log messages to file or not.
     is_output_log_on_screen : `bool`
         Is outputting the log messages on screen or not.
-    hexapod_type : `MTHexapod.SalIndex`
+    hexapod_type : enum `MTHexapod.SalIndex`
         The hexapod type.
     is_simulation_mode : `bool`
         Is the simulation mode or not.

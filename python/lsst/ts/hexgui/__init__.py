@@ -34,6 +34,7 @@ from .constants import *
 from .control_panel import *
 from .enums import *
 from .main_window import *
+from .mock_controller import *
 from .model import *
 from .signals import *
 from .status import *

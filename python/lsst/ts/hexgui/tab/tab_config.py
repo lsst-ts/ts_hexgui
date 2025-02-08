@@ -175,19 +175,19 @@ class TabConfig(TabTemplate):
             Configuration.
         """
 
-        self._configuration["position_max_xy"].setText(f"{config.pos_limits[0]} um")
-        self._configuration["position_min_z"].setText(f"{config.pos_limits[1]} um")
-        self._configuration["position_max_z"].setText(f"{config.pos_limits[2]} um")
+        self._configuration["position_max_xy"].setText(f"{config.pos_limits[0]:.2f} um")
+        self._configuration["position_min_z"].setText(f"{config.pos_limits[1]:.2f} um")
+        self._configuration["position_max_z"].setText(f"{config.pos_limits[2]:.2f} um")
 
-        self._configuration["angle_max_xy"].setText(f"{config.pos_limits[3]} deg")
-        self._configuration["angle_min_z"].setText(f"{config.pos_limits[4]} deg")
-        self._configuration["angle_max_z"].setText(f"{config.pos_limits[5]} deg")
+        self._configuration["angle_max_xy"].setText(f"{config.pos_limits[3]:.6f} deg")
+        self._configuration["angle_min_z"].setText(f"{config.pos_limits[4]:.6f} deg")
+        self._configuration["angle_max_z"].setText(f"{config.pos_limits[5]:.6f} deg")
 
         self._configuration["linear_velocity_max_xy"].setText(
-            f"{config.vel_limits[0]} um/sec"
+            f"{config.vel_limits[0]:.2f} um/sec"
         )
         self._configuration["linear_velocity_max_z"].setText(
-            f"{config.vel_limits[1]} um/sec"
+            f"{config.vel_limits[1]:.2f} um/sec"
         )
 
         self._configuration["angular_velocity_max_xy"].setText(
@@ -198,18 +198,18 @@ class TabConfig(TabTemplate):
         )
 
         self._configuration["strut_length_max"].setText(
-            f"{config.max_displacement_strut} um"
+            f"{config.max_displacement_strut:.2f} um"
         )
         self._configuration["strut_velocity_max"].setText(
-            f"{config.max_velocity_strut} um/sec"
+            f"{config.max_velocity_strut:.2f} um/sec"
         )
         self._configuration["strut_acceleration_max"].setText(
-            f"{config.acceleration_strut} um/sec^2"
+            f"{config.acceleration_strut:.2f} um/sec^2"
         )
 
-        self._configuration["pivot_x"].setText(f"{config.pivot[0]} um")
-        self._configuration["pivot_y"].setText(f"{config.pivot[1]} um")
-        self._configuration["pivot_z"].setText(f"{config.pivot[2]} um")
+        self._configuration["pivot_x"].setText(f"{config.pivot[0]:.2f} um")
+        self._configuration["pivot_y"].setText(f"{config.pivot[1]:.2f} um")
+        self._configuration["pivot_z"].setText(f"{config.pivot[2]:.2f} um")
 
         color = Qt.green if config.drives_enabled else Qt.red
         self._configuration["drives_enabled"].setText(

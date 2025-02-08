@@ -977,6 +977,13 @@ class ControlPanel(QWidget):
 
         self._update_drive_status(config.drives_enabled)
 
+        self._command_parameters["linear_velocity_xy"].setValue(config.vel_limits[0])
+        self._command_parameters["linear_velocity_z"].setValue(config.vel_limits[1])
+        self._command_parameters["angular_velocity_rxry"].setValue(config.vel_limits[2])
+        self._command_parameters["angular_velocity_rz"].setValue(config.vel_limits[3])
+
+        self._command_parameters["acceleration"].setValue(config.acceleration_strut)
+
     def _update_drive_status(self, is_on: bool) -> None:
         """Update the drive status.
 

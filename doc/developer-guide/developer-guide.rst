@@ -38,6 +38,7 @@ hexgui
 * **Config** is a data class that has the configuration details in the hexapod control system.
 * **Status** is a data class that has the current controller status.
 * **CommandTelemetryClient** is the controller to communicate with the low-level controller.
+* **MockController** is the mock controller to support the simulation mode.
 
 The model–view–controller (MVC) architecture is used in this module.
 In this design, the view always shows the data sent from the model.

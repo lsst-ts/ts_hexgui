@@ -6,6 +6,19 @@
 Version History
 ##################
 
+.. _lsst.ts.hexgui-0.4.0:
+
+-------------
+0.4.0
+-------------
+
+* Update the **control_panel.py** to set the current configured velocity and acceleration.
+* Tune the format of **tab_config.py**.
+* Fix the unit in **model.py**.
+* Add the user guide and error handling documents.
+* Support the simulation mode.
+* Fix the **MAX_ACTUATOR_RANGE_MIC** in **constants.py**.
+
 .. _lsst.ts.hexgui-0.3.0:
 
 -------------

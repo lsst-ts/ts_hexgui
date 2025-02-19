@@ -6,6 +6,14 @@
 Version History
 ##################
 
+.. _lsst.ts.hexgui-0.4.1:
+
+-------------
+0.4.1
+-------------
+
+* Remove the **ts_idl**.
+
 .. _lsst.ts.hexgui-0.4.0:
 
 -------------

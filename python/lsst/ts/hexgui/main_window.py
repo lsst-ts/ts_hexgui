@@ -235,7 +235,7 @@ class MainWindow(QMainWindow):
         self,
         hexapod_type: MTHexapod.SalIndex,
         is_simulation_mode: bool,
-        version: str = "v4",
+        version: str = "v5",
     ) -> Model:
         """Create the model.
 
@@ -246,7 +246,7 @@ class MainWindow(QMainWindow):
         is_simulation_mode : `bool`
             Is the simulation mode or not.
         version : `str`, optional
-            Version of the configuration file. (the default is "v4")
+            Version of the configuration file. (the default is "v5")
 
         Returns
         -------

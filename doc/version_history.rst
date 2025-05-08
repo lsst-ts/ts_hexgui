@@ -6,6 +6,14 @@
 Version History
 ##################
 
+.. _lsst.ts.hexgui-0.4.3:
+
+-------------
+0.4.3
+-------------
+
+* Use the configuration file of version 5.
+
 .. _lsst.ts.hexgui-0.4.2:
 
 -------------

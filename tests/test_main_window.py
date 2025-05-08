@@ -59,7 +59,7 @@ def test_init(widget: MainWindow) -> None:
 
 
 def _get_config() -> dict:
-    filepath = get_config_dir("MTHexapod/v4") / "default_gui.yaml"
+    filepath = get_config_dir("MTHexapod/v5") / "default_gui.yaml"
     return read_yaml_file(filepath)
 
 

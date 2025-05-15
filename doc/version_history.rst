@@ -6,6 +6,14 @@
 Version History
 ##################
 
+.. _lsst.ts.hexgui-0.4.4:
+
+-------------
+0.4.4
+-------------
+
+* Add the **QT_QPA_PLATFORM** to ``meta.yaml`` to fix the test section of conda recipe.
+
 .. _lsst.ts.hexgui-0.4.3:
 
 -------------

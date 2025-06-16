@@ -6,6 +6,14 @@
 Version History
 ##################
 
+.. _lsst.ts.hexgui-0.4.5:
+
+-------------
+0.4.5
+-------------
+
+* Simplify the ``setup.py``.
+
 .. _lsst.ts.hexgui-0.4.4:
 
 -------------

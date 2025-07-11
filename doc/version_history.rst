@@ -6,6 +6,14 @@
 Version History
 ##################
 
+.. _lsst.ts.hexgui-0.5.0:
+
+-------------
+0.5.0
+-------------
+
+* Update the ``structs.py`` to reflect the interface change in **ts_hexapod_controller** v1.8.0.
+
 .. _lsst.ts.hexgui-0.4.5:
 
 -------------

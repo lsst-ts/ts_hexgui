@@ -6,6 +6,14 @@
 Version History
 ##################
 
+.. _lsst.ts.hexgui-0.5.1:
+
+-------------
+0.5.1
+-------------
+
+* Fix the comment in **Config** of ``structs.py``.
+
 .. _lsst.ts.hexgui-0.5.0:
 
 -------------

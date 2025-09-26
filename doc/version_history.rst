@@ -6,6 +6,14 @@
 Version History
 ##################
 
+.. _lsst.ts.hexgui-0.5.3:
+
+-------------
+0.5.3
+-------------
+
+* Adapt the qasync v0.28.0.
+
 .. _lsst.ts.hexgui-0.5.2:
 
 -------------

@@ -6,6 +6,14 @@
 Version History
 ##################
 
+.. _lsst.ts.hexgui-0.5.2:
+
+-------------
+0.5.2
+-------------
+
+* Update the **ts-conda-build**.
+
 .. _lsst.ts.hexgui-0.5.1:
 
 -------------

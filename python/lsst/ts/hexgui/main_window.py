@@ -129,9 +129,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(container)
 
         # Disable the Qt close button
-        self.setWindowFlags(
-            Qt.Window | Qt.WindowMinimizeButtonHint | Qt.WindowMaximizeButtonHint
-        )
+        self.setWindowFlags(Qt.Window | Qt.WindowMinimizeButtonHint | Qt.WindowMaximizeButtonHint)
 
         self._add_tool_bar()
 
@@ -218,16 +216,11 @@ class MainWindow(QMainWindow):
         log_dir = pathlib.Path(default_log_dir)
         if not log_dir.is_dir():
             print(
-                (
-                    f"Default log directory: {default_log_dir} does not exist. "
-                    "Use the home directory instead."
-                )
+                (f"Default log directory: {default_log_dir} does not exist. Use the home directory instead.")
             )
             log_dir = pathlib.Path.home()
 
-        name = f"{hexapod_type.name.lower()}_log_%s.txt" % datetime.now().strftime(
-            "%d_%m_%Y_%H_%M_%S"
-        )
+        name = f"{hexapod_type.name.lower()}_log_%s.txt" % datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
 
         return log_dir / name
 
@@ -258,17 +251,9 @@ class MainWindow(QMainWindow):
         filepath = get_config_dir(f"MTHexapod/{version}") / "default_gui.yaml"
         default_settings = read_yaml_file(filepath)
 
-        config_name = (
-            "camera_config"
-            if hexapod_type == MTHexapod.SalIndex.CAMERA_HEXAPOD
-            else "m2_config"
-        )
+        config_name = "camera_config" if hexapod_type == MTHexapod.SalIndex.CAMERA_HEXAPOD else "m2_config"
 
-        host = (
-            LOCALHOST_IPV4
-            if is_simulation_mode
-            else default_settings[config_name]["host"]
-        )
+        host = LOCALHOST_IPV4 if is_simulation_mode else default_settings[config_name]["host"]
 
         return Model(
             self.log,
@@ -306,9 +291,7 @@ class MainWindow(QMainWindow):
         action_connect.setToolTip("Connect to the hexapod controller")
 
         action_disconnect = tool_bar.addAction("Disconnect", self._callback_disconnect)
-        action_disconnect.setToolTip(
-            "Disconnect and close all tasks (this might take some time)"
-        )
+        action_disconnect.setToolTip("Disconnect and close all tasks (this might take some time)")
 
         action_settings = tool_bar.addAction("Settings", self._callback_settings)
         action_settings.setToolTip("Show the application settings")
@@ -390,9 +373,7 @@ class MainWindow(QMainWindow):
         action_connect.setEnabled(False)
 
         if self.model.is_connected():
-            await prompt_dialog_warning(
-                "_callback_connect()", "The controller is already connected."
-            )
+            await prompt_dialog_warning("_callback_connect()", "The controller is already connected.")
 
         else:
             try:

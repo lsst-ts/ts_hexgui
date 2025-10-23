@@ -81,7 +81,6 @@ async def test_init(model_async: Model) -> None:
 
 @pytest.mark.asyncio
 async def test_connect(model_async: Model) -> None:
-
     assert model_async.is_connected() is True
 
 
@@ -91,14 +90,12 @@ def test_is_connected(model: Model) -> None:
 
 @pytest.mark.asyncio
 async def test_disconnect(model_async: Model) -> None:
-
     await model_async.disconnect()
 
     assert model_async.is_connected() is False
 
 
 def test_is_in_motion(model: Model) -> None:
-
     status_words = [0] * NUM_STRUT
     assert model._is_in_motion(status_words) is False
 
@@ -107,7 +104,6 @@ def test_is_in_motion(model: Model) -> None:
 
 
 def test_is_csc_commander(model: Model) -> None:
-
     assert model.is_csc_commander() is False
 
     model._status.command_source = CommandSource.CSC.value
@@ -115,13 +111,11 @@ def test_is_csc_commander(model: Model) -> None:
 
 
 def test_assert_is_connected(model: Model) -> None:
-
     with pytest.raises(RuntimeError):
         model.assert_is_connected()
 
 
 def test_make_command(model: Model) -> None:
-
     command_code = CommandCode.ENABLE_DRIVES
     command = model.make_command(
         command_code,
@@ -144,7 +138,6 @@ def test_make_command(model: Model) -> None:
 
 
 def test_make_command_state(model: Model) -> None:
-
     values = [2.0, 3.0, 6.0]
     for trigger_state, value in zip(TriggerState, values):
         command = model.make_command_state(trigger_state)
@@ -155,7 +148,6 @@ def test_make_command_state(model: Model) -> None:
 
 
 def test_make_command_enabled_substate(model: Model) -> None:
-
     values = [1.0, 3.0]
     patterns = [MotionPattern.Async, MotionPattern.Sync]
     for trigger_state, value, pattern in zip(TriggerEnabledSubState, values, patterns):
@@ -168,7 +160,6 @@ def test_make_command_enabled_substate(model: Model) -> None:
 
 
 def test_report_default(qtbot: QtBot, model: Model) -> None:
-
     signals = [
         model.signals["state"].command_source,
         model.signals["state"].state,
@@ -193,21 +184,16 @@ def test_report_default(qtbot: QtBot, model: Model) -> None:
 
 
 def test_compare_status_and_report_exception(model: Model) -> None:
-
     with pytest.raises(TypeError):
-        model._compare_status_and_report(
-            "command_source", [1, 2], model.signals["state"].command_source
-        )
+        model._compare_status_and_report("command_source", [1, 2], model.signals["state"].command_source)
 
 
 def test_report_config(qtbot: QtBot, model: Model) -> None:
-
     with qtbot.waitSignal(model.signals["config"].config, timeout=TIMEOUT):
         model.report_config(Config())
 
 
 def test_report_control_data(qtbot: QtBot, model: Model) -> None:
-
     signals = [
         model.signals["control"].command_acceleration,
         model.signals["control"].command_position,
@@ -218,7 +204,6 @@ def test_report_control_data(qtbot: QtBot, model: Model) -> None:
 
 
 def test_report_position(qtbot: QtBot, model: Model) -> None:
-
     signals = [
         model.signals["position"].strut_position,
         model.signals["position"].strut_position_error,
@@ -226,13 +211,10 @@ def test_report_position(qtbot: QtBot, model: Model) -> None:
         model.signals["position"].in_motion,
     ]
     with qtbot.waitSignals(signals, timeout=TIMEOUT):
-        model.report_position(
-            [0.0] * NUM_STRUT, [0.0] * NUM_STRUT, [0.0] * NUM_DEGREE_OF_FREEDOM, False
-        )
+        model.report_position([0.0] * NUM_STRUT, [0.0] * NUM_STRUT, [0.0] * NUM_DEGREE_OF_FREEDOM, False)
 
 
 def test_report_power(qtbot: QtBot, model: Model) -> None:
-
     signals = [
         model.signals["power"].current,
         model.signals["power"].voltage,
@@ -242,7 +224,6 @@ def test_report_power(qtbot: QtBot, model: Model) -> None:
 
 
 def test_report_state(qtbot: QtBot, model: Model) -> None:
-
     with qtbot.waitSignal(model.signals["state"].command_source, timeout=TIMEOUT):
         model.report_state(
             CommandSource.CSC,
@@ -268,14 +249,10 @@ def test_report_state(qtbot: QtBot, model: Model) -> None:
             MTHexapod.EnabledSubstate.MOVING_POINT_TO_POINT,
         )
 
-    assert (
-        model._status.substate_enabled
-        == MTHexapod.EnabledSubstate.MOVING_POINT_TO_POINT.value
-    )
+    assert model._status.substate_enabled == MTHexapod.EnabledSubstate.MOVING_POINT_TO_POINT.value
 
 
 def test_report_application_status(qtbot: QtBot, model: Model) -> None:
-
     with qtbot.waitSignal(model.signals["application_status"].status, timeout=TIMEOUT):
         model.report_application_status(1)
 
@@ -283,39 +260,29 @@ def test_report_application_status(qtbot: QtBot, model: Model) -> None:
 
 
 def test_report_drive_status(qtbot: QtBot, model: Model) -> None:
-
     with qtbot.waitSignal(model.signals["drive"].status_word, timeout=TIMEOUT):
-        model.report_drive_status(
-            [1] * NUM_STRUT, [0] * NUM_STRUT, [0] * NUM_STRUT, [0] * NUM_STRUT
-        )
+        model.report_drive_status([1] * NUM_STRUT, [0] * NUM_STRUT, [0] * NUM_STRUT, [0] * NUM_STRUT)
 
     assert model._status.status_word == [1] * NUM_STRUT
 
     with qtbot.waitSignal(model.signals["drive"].latching_fault, timeout=TIMEOUT):
-        model.report_drive_status(
-            [1] * NUM_STRUT, [2] * NUM_STRUT, [0] * NUM_STRUT, [0] * NUM_STRUT
-        )
+        model.report_drive_status([1] * NUM_STRUT, [2] * NUM_STRUT, [0] * NUM_STRUT, [0] * NUM_STRUT)
 
     assert model._status.latching_fault == [2] * NUM_STRUT
 
     with qtbot.waitSignal(model.signals["drive"].copley_status, timeout=TIMEOUT):
-        model.report_drive_status(
-            [1] * NUM_STRUT, [2] * NUM_STRUT, [3] * NUM_STRUT, [0] * NUM_STRUT
-        )
+        model.report_drive_status([1] * NUM_STRUT, [2] * NUM_STRUT, [3] * NUM_STRUT, [0] * NUM_STRUT)
 
     assert model._status.copley_status == [3] * NUM_STRUT
 
     with qtbot.waitSignal(model.signals["drive"].input_pin, timeout=TIMEOUT):
-        model.report_drive_status(
-            [1] * NUM_STRUT, [2] * NUM_STRUT, [3] * NUM_STRUT, [4] * NUM_STRUT
-        )
+        model.report_drive_status([1] * NUM_STRUT, [2] * NUM_STRUT, [3] * NUM_STRUT, [4] * NUM_STRUT)
 
     assert model._status.input_pin == [4] * NUM_STRUT
 
 
 @pytest.mark.asyncio
 async def test_command_move_point_to_point(model_async: Model) -> None:
-
     await _enable_controller(model_async)
     await _move_point_to_point(
         model_async,
@@ -329,17 +296,12 @@ async def test_command_move_point_to_point(model_async: Model) -> None:
 
     await asyncio.sleep(1.0)
 
-    assert tuple(model_async._mock_ctrl.telemetry.measured_xyz) == pytest.approx(
-        (100.0, 200.0, 300.0)
-    )
-    assert tuple(model_async._mock_ctrl.telemetry.measured_uvw) == pytest.approx(
-        (0.1, -0.1, 0.005)
-    )
+    assert tuple(model_async._mock_ctrl.telemetry.measured_xyz) == pytest.approx((100.0, 200.0, 300.0))
+    assert tuple(model_async._mock_ctrl.telemetry.measured_uvw) == pytest.approx((0.1, -0.1, 0.005))
 
 
 @pytest.mark.asyncio
 async def _enable_controller(model_async: Model) -> None:
-
     command = model_async.make_command_state(TriggerState.Enable)
     await model_async.client.run_command(command)
     await asyncio.sleep(1.0)
@@ -355,7 +317,6 @@ async def _move_point_to_point(
     param5: float = 0.0,
     param6: float = 0.0,
 ) -> None:
-
     command_position_set = model_async.make_command(
         CommandCode.POSITION_SET,
         param1=param1,
@@ -376,16 +337,12 @@ async def _move_point_to_point(
 
 @pytest.mark.asyncio
 async def test_command_stop(model_async: Model) -> None:
-
     await _enable_controller(model_async)
     await _move_point_to_point(model_async, param3=12000.0)
 
     await asyncio.sleep(0.5)
 
-    assert (
-        model_async._status.substate_enabled
-        == MTHexapod.EnabledSubstate.MOVING_POINT_TO_POINT.value
-    )
+    assert model_async._status.substate_enabled == MTHexapod.EnabledSubstate.MOVING_POINT_TO_POINT.value
 
     command_stop = model_async.make_command_enabled_substate(
         TriggerEnabledSubState.Stop,
@@ -395,16 +352,12 @@ async def test_command_stop(model_async: Model) -> None:
 
     await asyncio.sleep(1.0)
 
-    assert (
-        model_async._status.substate_enabled
-        == MTHexapod.EnabledSubstate.STATIONARY.value
-    )
+    assert model_async._status.substate_enabled == MTHexapod.EnabledSubstate.STATIONARY.value
     assert 0 < model_async._mock_ctrl.telemetry.measured_xyz[2] < 10000.0
 
 
 @pytest.mark.asyncio
 async def test_command_position_set(model_async: Model) -> None:
-
     await _enable_controller(model_async)
 
     command = model_async.make_command(
@@ -430,7 +383,6 @@ async def test_command_position_set(model_async: Model) -> None:
 
 @pytest.mark.asyncio
 async def test_command_position_offset(model_async: Model) -> None:
-
     await _enable_controller(model_async)
 
     command = model_async.make_command(
@@ -456,7 +408,6 @@ async def test_command_position_offset(model_async: Model) -> None:
 
 @pytest.mark.asyncio
 async def test_command_set_raw_strut(model_async: Model) -> None:
-
     command = model_async.make_command(CommandCode.SET_RAW_STRUT)
     with pytest.raises(salobj.ExpectedError):
         await model_async.client.run_command(command)
@@ -464,12 +415,9 @@ async def test_command_set_raw_strut(model_async: Model) -> None:
 
 @pytest.mark.asyncio
 async def test_command_set_pivot_point(model_async: Model) -> None:
-
     await _enable_controller(model_async)
 
-    command = model_async.make_command(
-        CommandCode.SET_PIVOT_POINT, param1=1.0, param2=2.0, param3=3.0
-    )
+    command = model_async.make_command(CommandCode.SET_PIVOT_POINT, param1=1.0, param2=2.0, param3=3.0)
     await model_async.client.run_command(command)
 
     assert tuple(model_async._mock_ctrl.config.pivot) == (1.0, 2.0, 3.0)
@@ -477,7 +425,6 @@ async def test_command_set_pivot_point(model_async: Model) -> None:
 
 @pytest.mark.asyncio
 async def test_command_mask_limit_switch(model_async: Model) -> None:
-
     command = model_async.make_command(CommandCode.MASK_LIMIT_SW)
     with pytest.raises(salobj.ExpectedError):
         await model_async.client.run_command(command)
@@ -485,7 +432,6 @@ async def test_command_mask_limit_switch(model_async: Model) -> None:
 
 @pytest.mark.asyncio
 async def test_command_switch_command_source(model_async: Model) -> None:
-
     command = model_async.make_command(CommandCode.CMD_SOURCE, param1=1.0)
     await model_async.client.run_command(command)
 
@@ -497,7 +443,6 @@ async def test_command_switch_command_source(model_async: Model) -> None:
 
 @pytest.mark.asyncio
 async def test_command_config_accel(model_async: Model) -> None:
-
     await _enable_controller(model_async)
 
     # In range
@@ -514,7 +459,6 @@ async def test_command_config_accel(model_async: Model) -> None:
 
 @pytest.mark.asyncio
 async def test_command_config_vel(model_async: Model) -> None:
-
     await _enable_controller(model_async)
 
     command = model_async.make_command(

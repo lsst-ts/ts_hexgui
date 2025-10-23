@@ -130,7 +130,6 @@ class TabTelemetry(TabTemplate):
         self._set_signal_power(self.model.signals["power"])  # type: ignore[arg-type]
 
     def create_layout(self) -> QVBoxLayout:
-
         layout_telemetry = QVBoxLayout()
         layout_telemetry.addWidget(self._create_group_position())
         layout_telemetry.addWidget(self._create_group_power())
@@ -165,9 +164,7 @@ class TabTelemetry(TabTemplate):
         self.add_empty_row_to_form_layout(layout)
 
         for axis in ("x", "y", "z", "rx", "ry", "rz"):
-            layout.addRow(
-                f"Position {axis}:", self._telemetry_position[f"position_{axis}"]
-            )
+            layout.addRow(f"Position {axis}:", self._telemetry_position[f"position_{axis}"])
 
         self.add_empty_row_to_form_layout(layout)
 
@@ -199,9 +196,7 @@ class TabTelemetry(TabTemplate):
         """
 
         layout = QFormLayout()
-        layout.addRow(
-            "Time frame difference:", self._telemetry_position["time_frame_difference"]
-        )
+        layout.addRow("Time frame difference:", self._telemetry_position["time_frame_difference"])
 
         return create_group_box("Time Data", layout)
 
@@ -263,9 +258,7 @@ class TabTelemetry(TabTemplate):
 
         layout = QFormLayout()
 
-        layout.addRow(
-            "Status word:", self._telemetry_position["application_status_word"]
-        )
+        layout.addRow("Status word:", self._telemetry_position["application_status_word"])
         self.add_empty_row_to_form_layout(layout)
 
         names = [
@@ -374,9 +367,7 @@ class TabTelemetry(TabTemplate):
         """
 
         for idx, acceleration in enumerate(accelerations):
-            self._telemetry_strut[f"command_acceleration_{idx}"].setText(
-                f"{acceleration:.3f} um/sec^2"
-            )
+            self._telemetry_strut[f"command_acceleration_{idx}"].setText(f"{acceleration:.3f} um/sec^2")
 
     @asyncSlot()
     async def _callback_command_position(self, positions: list[float]) -> None:
@@ -389,9 +380,7 @@ class TabTelemetry(TabTemplate):
         """
 
         for idx, position in enumerate(positions):
-            self._telemetry_strut[f"command_position_{idx}"].setText(
-                f"{position:.3f} um"
-            )
+            self._telemetry_strut[f"command_position_{idx}"].setText(f"{position:.3f} um")
 
     @asyncSlot()
     async def _callback_time_difference(self, time_difference: float) -> None:
@@ -403,9 +392,7 @@ class TabTelemetry(TabTemplate):
             Time difference in seconds.
         """
 
-        self._telemetry_position["time_frame_difference"].setText(
-            f"{time_difference:.7f} sec"
-        )
+        self._telemetry_position["time_frame_difference"].setText(f"{time_difference:.7f} sec")
 
     def _set_signal_position(self, signal: SignalPosition) -> None:
         """Set the position signal.
@@ -435,9 +422,7 @@ class TabTelemetry(TabTemplate):
             self._telemetry_strut[f"position_{idx}"].setText(f"{position:.3f} um")
 
     @asyncSlot()
-    async def _callback_strut_position_error(
-        self, position_errors: list[float]
-    ) -> None:
+    async def _callback_strut_position_error(self, position_errors: list[float]) -> None:
         """Callback of the current strut position error.
 
         Parameters
@@ -448,9 +433,7 @@ class TabTelemetry(TabTemplate):
         """
 
         for idx, position_error in enumerate(position_errors):
-            self._telemetry_strut[f"position_error_{idx}"].setText(
-                f"{position_error:.3f} um"
-            )
+            self._telemetry_strut[f"position_error_{idx}"].setText(f"{position_error:.3f} um")
 
     @asyncSlot()
     async def _callback_hexapod_position(self, positions: list[float]) -> None:
@@ -463,12 +446,8 @@ class TabTelemetry(TabTemplate):
         """
 
         for idx, axis in enumerate(["x", "y", "z"]):
-            self._telemetry_position[f"position_{axis}"].setText(
-                f"{positions[idx]:.3f} um"
-            )
-            self._telemetry_position[f"position_r{axis}"].setText(
-                f"{positions[idx+3]:.7f} deg"
-            )
+            self._telemetry_position[f"position_{axis}"].setText(f"{positions[idx]:.3f} um")
+            self._telemetry_position[f"position_r{axis}"].setText(f"{positions[idx + 3]:.7f} deg")
 
     @asyncSlot()
     async def _callback_in_motion(self, in_motion: bool) -> None:
@@ -481,9 +460,7 @@ class TabTelemetry(TabTemplate):
         """
 
         color = Qt.green if in_motion else Qt.black
-        self._telemetry_position["in_motion"].setText(
-            f"<font color='{color.name}'>{str(in_motion)}</font>"
-        )
+        self._telemetry_position["in_motion"].setText(f"<font color='{color.name}'>{str(in_motion)}</font>")
 
     def _set_signal_power(self, signal: SignalPower) -> None:
         """Set the power signal.

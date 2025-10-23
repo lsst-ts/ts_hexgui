@@ -99,7 +99,6 @@ class Model(object):
         is_simulation_mode: bool = False,
         duration_refresh: int = 100,
     ) -> None:
-
         self.log = log
         self.hexapod_type = hexapod_type
 
@@ -282,11 +281,7 @@ class Model(object):
 
         # See ts_hexapod_controller repository for the enum value:
         # AppStatus_CommandByCsc = 0x400
-        command_source = (
-            CommandSource.CSC
-            if (telemetry.application_status & 0x400)
-            else CommandSource.GUI
-        )
+        command_source = CommandSource.CSC if (telemetry.application_status & 0x400) else CommandSource.GUI
         self.report_state(
             command_source,
             MTHexapod.ControllerState(telemetry.state),
@@ -494,9 +489,7 @@ class Model(object):
 
         self.report_config(Config())
         self.report_control_data([0.0] * NUM_STRUT, [0.0] * NUM_STRUT, 0.0)
-        self.report_position(
-            [0.0] * NUM_STRUT, [0.0] * NUM_STRUT, [0.0] * NUM_DEGREE_OF_FREEDOM, False
-        )
+        self.report_position([0.0] * NUM_STRUT, [0.0] * NUM_STRUT, [0.0] * NUM_DEGREE_OF_FREEDOM, False)
         self.report_power([0.0] * NUM_STRUT, [0.0] * NUM_DRIVE)
 
     def report_config(self, config: Config) -> None:
@@ -604,12 +597,12 @@ class Model(object):
         )
         self._compare_status_and_report("state", state.value, signal.state)  # type: ignore[attr-defined]
         self._compare_status_and_report(
-            "substate_enabled", substate_enabled.value, signal.substate_enabled  # type: ignore[attr-defined]
+            "substate_enabled",
+            substate_enabled.value,
+            signal.substate_enabled,  # type: ignore[attr-defined]
         )
 
-    def _compare_status_and_report(
-        self, field: str, value: typing.Any, signal: Signal
-    ) -> None:
+    def _compare_status_and_report(self, field: str, value: typing.Any, signal: Signal) -> None:
         """Compare the value with current status and report it if different.
 
         Parameters
@@ -653,7 +646,9 @@ class Model(object):
         signal = self.signals["application_status"]
 
         self._compare_status_and_report(
-            "application_status", status, signal.status  # type: ignore[attr-defined]
+            "application_status",
+            status,
+            signal.status,  # type: ignore[attr-defined]
         )
 
     def report_drive_status(
@@ -680,16 +675,24 @@ class Model(object):
         signal = self.signals["drive"]
 
         self._compare_status_and_report(
-            "status_word", status_word, signal.status_word  # type: ignore[attr-defined]
+            "status_word",
+            status_word,
+            signal.status_word,  # type: ignore[attr-defined]
         )
         self._compare_status_and_report(
-            "latching_fault", latching_fault, signal.latching_fault  # type: ignore[attr-defined]
+            "latching_fault",
+            latching_fault,
+            signal.latching_fault,  # type: ignore[attr-defined]
         )
         self._compare_status_and_report(
-            "copley_status", copley_status, signal.copley_status  # type: ignore[attr-defined]
+            "copley_status",
+            copley_status,
+            signal.copley_status,  # type: ignore[attr-defined]
         )
         self._compare_status_and_report(
-            "input_pin", input_pin, signal.input_pin  # type: ignore[attr-defined]
+            "input_pin",
+            input_pin,
+            signal.input_pin,  # type: ignore[attr-defined]
         )
 
     async def __aenter__(self) -> object:

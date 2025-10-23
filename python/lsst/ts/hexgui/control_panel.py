@@ -381,9 +381,7 @@ class ControlPanel(QWidget):
         """
 
         command_state = QRadioButton("State command", parent=self)
-        command_enabled_substate = QRadioButton(
-            "Enabled sub-state command", parent=self
-        )
+        command_enabled_substate = QRadioButton("Enabled sub-state command", parent=self)
         command_set_position = QRadioButton("Set position", parent=self)
         command_set_position_offset = QRadioButton("Set position offset", parent=self)
         command_set_position_raw = QRadioButton("Set raw position", parent=self)
@@ -391,9 +389,7 @@ class ControlPanel(QWidget):
         command_commander = QRadioButton("Switch command source", parent=self)
         command_mask = QRadioButton("Mask limit switch", parent=self)
         command_config_velocity = QRadioButton("Configure velocity", parent=self)
-        command_config_acceleration = QRadioButton(
-            "Configure acceleration", parent=self
-        )
+        command_config_acceleration = QRadioButton("Configure acceleration", parent=self)
 
         command_state.setToolTip("Transition the state.")
         command_enabled_substate.setToolTip("Transition the enabled sub-state.")
@@ -403,12 +399,8 @@ class ControlPanel(QWidget):
         command_set_pivot.setToolTip("Set the hexapod pivot position.")
         command_commander.setToolTip("Switch the command source (GUI or CSC).")
         command_mask.setToolTip("Temporarily mask the limit switches.")
-        command_config_velocity.setToolTip(
-            "Configure the maximum velocity for position and orientation."
-        )
-        command_config_acceleration.setToolTip(
-            "Configure the maximum acceleration for all struts."
-        )
+        command_config_velocity.setToolTip("Configure the maximum velocity for position and orientation.")
+        command_config_acceleration.setToolTip("Configure the maximum acceleration for all struts.")
 
         command_state.toggled.connect(self._callback_command)
         command_enabled_substate.toggled.connect(self._callback_command)
@@ -533,16 +525,12 @@ class ControlPanel(QWidget):
         # Command the controller
         match name:
             case "state":
-                trigger_state = TriggerState(
-                    self._command_parameters["state"].currentIndex()
-                )
+                trigger_state = TriggerState(self._command_parameters["state"].currentIndex())
                 command = self.model.make_command_state(trigger_state)
 
             case "enabled_substate":
                 command = self.model.make_command_enabled_substate(
-                    TriggerEnabledSubState(
-                        self._command_parameters["enabled_substate"].currentIndex()
-                    ),
+                    TriggerEnabledSubState(self._command_parameters["enabled_substate"].currentIndex()),
                     self._get_motion_pattern(),
                 )
 
@@ -590,11 +578,7 @@ class ControlPanel(QWidget):
             case "commander":
                 command = self.model.make_command(
                     CommandCode.CMD_SOURCE,
-                    param1=float(
-                        CommandSource(
-                            self._command_parameters["source"].currentIndex()
-                        ).value
-                    ),
+                    param1=float(CommandSource(self._command_parameters["source"].currentIndex()).value),
                 )
 
             case "mask":
@@ -820,15 +804,9 @@ class ControlPanel(QWidget):
         # Column 1
         layout_parameters_1 = QFormLayout()
         layout_parameters_1.addRow("State trigger:", self._command_parameters["state"])
-        layout_parameters_1.addRow(
-            "Enabled sub-state trigger:", self._command_parameters["enabled_substate"]
-        )
-        layout_parameters_1.addRow(
-            "Command source:", self._command_parameters["source"]
-        )
-        layout_parameters_1.addRow(
-            "Motion pattern:", self._command_parameters["motion_pattern"]
-        )
+        layout_parameters_1.addRow("Enabled sub-state trigger:", self._command_parameters["enabled_substate"])
+        layout_parameters_1.addRow("Command source:", self._command_parameters["source"])
+        layout_parameters_1.addRow("Motion pattern:", self._command_parameters["motion_pattern"])
         for axis in ["X", "Y", "Z"]:
             layout_parameters_1.addRow(
                 f"Pivot {axis}:",
@@ -853,19 +831,11 @@ class ControlPanel(QWidget):
 
         # Column 4
         layout_parameters_4 = QFormLayout()
-        layout_parameters_4.addRow(
-            "XY:", self._command_parameters["linear_velocity_xy"]
-        )
+        layout_parameters_4.addRow("XY:", self._command_parameters["linear_velocity_xy"])
         layout_parameters_4.addRow("Z:", self._command_parameters["linear_velocity_z"])
-        layout_parameters_4.addRow(
-            "RxRy:", self._command_parameters["angular_velocity_rxry"]
-        )
-        layout_parameters_4.addRow(
-            "Rz:", self._command_parameters["angular_velocity_rz"]
-        )
-        layout_parameters_4.addRow(
-            "Acceleration:", self._command_parameters["acceleration"]
-        )
+        layout_parameters_4.addRow("RxRy:", self._command_parameters["angular_velocity_rxry"])
+        layout_parameters_4.addRow("Rz:", self._command_parameters["angular_velocity_rz"])
+        layout_parameters_4.addRow("Acceleration:", self._command_parameters["acceleration"])
 
         layout = QHBoxLayout()
         layout.addLayout(layout_parameters_1)
@@ -942,9 +912,7 @@ class ControlPanel(QWidget):
             Substate.
         """
 
-        self._labels["enabled_substate"].setText(
-            MTHexapod.EnabledSubstate(substate).name
-        )
+        self._labels["enabled_substate"].setText(MTHexapod.EnabledSubstate(substate).name)
 
     def _set_default(self) -> None:
         """Set the default values."""

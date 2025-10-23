@@ -31,9 +31,7 @@ from pytestqt.qtbot import QtBot
 
 @pytest.fixture
 def widget(qtbot: QtBot) -> TabPosition:
-    widget = TabPosition(
-        "Position", Model(logging.getLogger(), MTHexapod.SalIndex.CAMERA_HEXAPOD)
-    )
+    widget = TabPosition("Position", Model(logging.getLogger(), MTHexapod.SalIndex.CAMERA_HEXAPOD))
     qtbot.addWidget(widget)
 
     return widget
@@ -41,7 +39,6 @@ def widget(qtbot: QtBot) -> TabPosition:
 
 @pytest.mark.asyncio
 async def test_callback_time_out(widget: TabPosition) -> None:
-
     widget._strut_lengths = list(range(1, NUM_STRUT + 1))
     widget._positions = [10.0, 20.0, 30.0, 40.0, 50.0, 60.0]
 
@@ -54,17 +51,12 @@ async def test_callback_time_out(widget: TabPosition) -> None:
         if idx < 3:
             assert widget._figures["displacement"].get_points(idx)[-1].y() == position
         else:
-            assert (
-                widget._figures["angle"].get_points(idx - 3)[-1].y() == position * 1e6
-            )
+            assert widget._figures["angle"].get_points(idx - 3)[-1].y() == position * 1e6
 
 
 @pytest.mark.asyncio
 async def test_set_signal_position_velocity(widget: TabPosition) -> None:
-
-    widget.model.report_position(
-        [10.1] * NUM_STRUT, [20.2] * NUM_STRUT, [30.3] * NUM_DEGREE_OF_FREEDOM, True
-    )
+    widget.model.report_position([10.1] * NUM_STRUT, [20.2] * NUM_STRUT, [30.3] * NUM_DEGREE_OF_FREEDOM, True)
 
     # Sleep so the event loop can access CPU to handle the signal
     await asyncio.sleep(1)

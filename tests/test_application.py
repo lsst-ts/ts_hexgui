@@ -49,7 +49,6 @@ async def test_run_hexgui() -> None:
 
 
 def test_check_arguments() -> None:
-
     # Test the case with no arguments
     with pytest.raises(ValueError):
         check_arguments([])

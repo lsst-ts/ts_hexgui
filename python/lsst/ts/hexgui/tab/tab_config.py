@@ -77,7 +77,6 @@ class TabConfig(TabTemplate):
         self._set_signal_config(self.model.signals["config"])  # type: ignore[arg-type]
 
     def create_layout(self) -> QVBoxLayout:
-
         layout = QVBoxLayout()
         layout.addWidget(self._create_group_configuration())
 
@@ -106,12 +105,8 @@ class TabConfig(TabTemplate):
 
         self.add_empty_row_to_form_layout(layout)
 
-        layout.addRow(
-            "Linear velocity maximum xy:", self._configuration["linear_velocity_max_xy"]
-        )
-        layout.addRow(
-            "Linear velocity maximum z:", self._configuration["linear_velocity_max_z"]
-        )
+        layout.addRow("Linear velocity maximum xy:", self._configuration["linear_velocity_max_xy"])
+        layout.addRow("Linear velocity maximum z:", self._configuration["linear_velocity_max_z"])
 
         self.add_empty_row_to_form_layout(layout)
 
@@ -119,19 +114,13 @@ class TabConfig(TabTemplate):
             "Angular velocity maximum xy:",
             self._configuration["angular_velocity_max_xy"],
         )
-        layout.addRow(
-            "Angular velocity maximum z:", self._configuration["angular_velocity_max_z"]
-        )
+        layout.addRow("Angular velocity maximum z:", self._configuration["angular_velocity_max_z"])
 
         self.add_empty_row_to_form_layout(layout)
 
         layout.addRow("Strut length maximum:", self._configuration["strut_length_max"])
-        layout.addRow(
-            "Strut velocity maximum:", self._configuration["strut_velocity_max"]
-        )
-        layout.addRow(
-            "Strut acceleration maximum:", self._configuration["strut_acceleration_max"]
-        )
+        layout.addRow("Strut velocity maximum:", self._configuration["strut_velocity_max"])
+        layout.addRow("Strut acceleration maximum:", self._configuration["strut_acceleration_max"])
 
         self.add_empty_row_to_form_layout(layout)
 
@@ -183,29 +172,15 @@ class TabConfig(TabTemplate):
         self._configuration["angle_min_z"].setText(f"{config.pos_limits[4]:.6f} deg")
         self._configuration["angle_max_z"].setText(f"{config.pos_limits[5]:.6f} deg")
 
-        self._configuration["linear_velocity_max_xy"].setText(
-            f"{config.vel_limits[0]:.2f} um/sec"
-        )
-        self._configuration["linear_velocity_max_z"].setText(
-            f"{config.vel_limits[1]:.2f} um/sec"
-        )
+        self._configuration["linear_velocity_max_xy"].setText(f"{config.vel_limits[0]:.2f} um/sec")
+        self._configuration["linear_velocity_max_z"].setText(f"{config.vel_limits[1]:.2f} um/sec")
 
-        self._configuration["angular_velocity_max_xy"].setText(
-            f"{config.vel_limits[2]:.6f} deg/sec"
-        )
-        self._configuration["angular_velocity_max_z"].setText(
-            f"{config.vel_limits[3]:.6f} deg/sec"
-        )
+        self._configuration["angular_velocity_max_xy"].setText(f"{config.vel_limits[2]:.6f} deg/sec")
+        self._configuration["angular_velocity_max_z"].setText(f"{config.vel_limits[3]:.6f} deg/sec")
 
-        self._configuration["strut_length_max"].setText(
-            f"{config.max_displacement_strut:.2f} um"
-        )
-        self._configuration["strut_velocity_max"].setText(
-            f"{config.max_velocity_strut:.2f} um/sec"
-        )
-        self._configuration["strut_acceleration_max"].setText(
-            f"{config.acceleration_strut:.2f} um/sec^2"
-        )
+        self._configuration["strut_length_max"].setText(f"{config.max_displacement_strut:.2f} um")
+        self._configuration["strut_velocity_max"].setText(f"{config.max_velocity_strut:.2f} um/sec")
+        self._configuration["strut_acceleration_max"].setText(f"{config.acceleration_strut:.2f} um/sec^2")
 
         self._configuration["pivot_x"].setText(f"{config.pivot[0]:.2f} um")
         self._configuration["pivot_y"].setText(f"{config.pivot[1]:.2f} um")

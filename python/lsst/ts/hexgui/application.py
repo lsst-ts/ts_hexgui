@@ -53,14 +53,10 @@ def create_parser() -> tuple[QCommandLineParser, list[QCommandLineOption]]:
 
     parser.addPositionalArgument("hexapod", "1: camera hexapod, 2: M2 hexapod.")
 
-    option_verbose = QCommandLineOption(
-        ["v", "verbose"], "Print log messages to terminal."
-    )
+    option_verbose = QCommandLineOption(["v", "verbose"], "Print log messages to terminal.")
     parser.addOption(option_verbose)
 
-    option_simulation = QCommandLineOption(
-        ["s", "simulation"], "Run the simulation mode."
-    )
+    option_simulation = QCommandLineOption(["s", "simulation"], "Run the simulation mode.")
     parser.addOption(option_simulation)
 
     option_log_level = QCommandLineOption(
@@ -74,9 +70,7 @@ def create_parser() -> tuple[QCommandLineParser, list[QCommandLineOption]]:
     )
     parser.addOption(option_log_level)
 
-    option_no_log_file = QCommandLineOption(
-        ["no-logfile"], "Do not write log messages to file."
-    )
+    option_no_log_file = QCommandLineOption(["no-logfile"], "Do not write log messages to file.")
     parser.addOption(option_no_log_file)
 
     return parser, [

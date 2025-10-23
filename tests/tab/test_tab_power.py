@@ -31,9 +31,7 @@ from pytestqt.qtbot import QtBot
 
 @pytest.fixture
 def widget(qtbot: QtBot) -> TabPower:
-    widget = TabPower(
-        "Power", Model(logging.getLogger(), MTHexapod.SalIndex.CAMERA_HEXAPOD)
-    )
+    widget = TabPower("Power", Model(logging.getLogger(), MTHexapod.SalIndex.CAMERA_HEXAPOD))
     qtbot.addWidget(widget)
 
     return widget
@@ -41,26 +39,20 @@ def widget(qtbot: QtBot) -> TabPower:
 
 @pytest.mark.asyncio
 async def test_callback_time_out(widget: TabPower) -> None:
-
     widget._currents = list(range(1, NUM_STRUT + 1))
     widget._voltages = list(range(10, NUM_DRIVE + 10))
 
     await widget._callback_time_out()
 
     for idx in range(NUM_STRUT):
-        assert (
-            widget._figures["current"].get_points(idx)[-1].y() == widget._currents[idx]
-        )
+        assert widget._figures["current"].get_points(idx)[-1].y() == widget._currents[idx]
 
     for idx in range(NUM_DRIVE):
-        assert (
-            widget._figures["voltage"].get_points(idx)[-1].y() == widget._voltages[idx]
-        )
+        assert widget._figures["voltage"].get_points(idx)[-1].y() == widget._voltages[idx]
 
 
 @pytest.mark.asyncio
 async def test_set_signal_power(widget: TabPower) -> None:
-
     widget.model.report_power([10.1, 20.2, 30.3, 40.4, 50.5, 60.6], [70.7, 80.8, 90.9])
 
     # Sleep so the event loop can access CPU to handle the signal

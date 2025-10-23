@@ -31,9 +31,7 @@ from pytestqt.qtbot import QtBot
 
 @pytest.fixture
 def widget(qtbot: QtBot) -> TabConfig:
-    widget = TabConfig(
-        "Config", Model(logging.getLogger(), MTHexapod.SalIndex.CAMERA_HEXAPOD)
-    )
+    widget = TabConfig("Config", Model(logging.getLogger(), MTHexapod.SalIndex.CAMERA_HEXAPOD))
     qtbot.addWidget(widget)
 
     return widget
@@ -41,7 +39,6 @@ def widget(qtbot: QtBot) -> TabConfig:
 
 @pytest.mark.asyncio
 async def test_set_signal_config(widget: TabConfig) -> None:
-
     config = Config()
     config.acceleration_strut = 1.1
 
@@ -80,7 +77,4 @@ async def test_set_signal_config(widget: TabConfig) -> None:
     assert widget._configuration["pivot_x"].text() == "14.40 um"
     assert widget._configuration["pivot_y"].text() == "15.50 um"
     assert widget._configuration["pivot_z"].text() == "16.60 um"
-    assert (
-        widget._configuration["drives_enabled"].text()
-        == "<font color='green'>True</font>"
-    )
+    assert widget._configuration["drives_enabled"].text() == "<font color='green'>True</font>"

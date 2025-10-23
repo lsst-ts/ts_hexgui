@@ -107,7 +107,6 @@ class TabDriveStatus(TabTemplate):
         return indicators
 
     def create_layout(self) -> QVBoxLayout:
-
         # First column
         layout_drive = QVBoxLayout()
         layout_drive.addWidget(self._create_group_status_word())
@@ -161,9 +160,7 @@ class TabDriveStatus(TabTemplate):
             ),
         )
 
-    def _create_form_layout(
-        self, names: list[str], items: list[QWidget | QLayout]
-    ) -> QFormLayout:
+    def _create_form_layout(self, names: list[str], items: list[QWidget | QLayout]) -> QFormLayout:
         """Create a form layout.
 
         Parameters
@@ -185,9 +182,7 @@ class TabDriveStatus(TabTemplate):
 
         return layout
 
-    def _combine_indicators(
-        self, list_indicators: list[list[QRadioButton]]
-    ) -> list[QHBoxLayout]:
+    def _combine_indicators(self, list_indicators: list[list[QRadioButton]]) -> list[QHBoxLayout]:
         """Combine the indicators.
 
         Parameters
@@ -248,10 +243,7 @@ class TabDriveStatus(TabTemplate):
             self._create_form_layout(
                 names,
                 self._combine_indicators(
-                    [
-                        self._list_latching_fault_status[f"strut_{idx}"]
-                        for idx in range(NUM_STRUT)
-                    ]
+                    [self._list_latching_fault_status[f"strut_{idx}"] for idx in range(NUM_STRUT)]
                 ),
             ),
         )
@@ -304,10 +296,7 @@ class TabDriveStatus(TabTemplate):
             self._create_form_layout(
                 names,
                 self._combine_indicators(
-                    [
-                        self._list_copley_status[f"strut_{idx}"]
-                        for idx in range(NUM_STRUT)
-                    ]
+                    [self._list_copley_status[f"strut_{idx}"] for idx in range(NUM_STRUT)]
                 ),
             ),
         )
@@ -331,10 +320,7 @@ class TabDriveStatus(TabTemplate):
             self._create_form_layout(
                 names,
                 self._combine_indicators(
-                    [
-                        self._list_input_pin_state[f"strut_{idx}"]
-                        for idx in range(NUM_STRUT)
-                    ]
+                    [self._list_input_pin_state[f"strut_{idx}"] for idx in range(NUM_STRUT)]
                 ),
             ),
         )

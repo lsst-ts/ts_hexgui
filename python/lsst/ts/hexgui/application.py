@@ -22,9 +22,7 @@
 __all__ = ["run_hexgui", "check_arguments"]
 
 import asyncio
-import functools
 
-import qasync
 from lsst.ts.guitool import base_frame_run_application
 from lsst.ts.xml.enums import MTHexapod
 from PySide6.QtCore import QCommandLineOption, QCommandLineParser
@@ -34,47 +32,31 @@ from .main_window import MainWindow
 
 def run_hexgui() -> None:
     """Run the hexapod GUI."""
-    base_frame_run_application(main)
+    parser, options = create_parser()
+    base_frame_run_application("Hexapod EUI", parser, options, main)
 
 
-async def main(argv: list) -> bool:
-    """Main application.
+def create_parser() -> tuple[QCommandLineParser, list[QCommandLineOption]]:
+    """Create the command line parser.
 
-    Parameters
-    ----------
-    argv : `list`
-        Arguments from the command line.
+    Returns
+    -------
+    parser : `PySide6.QtCore.QCommandLineParser`
+        Command line parser.
+    `list` [`PySide6.QtCore.QCommandLineOption`]
+        List of command line options.
     """
 
-    # The set of "aboutToQuit" comes from "qasync/examples/aiohttp_fetch.py"
-    loop = asyncio.get_event_loop()
-    future: asyncio.Future = asyncio.Future()
-
-    # You need one (and only one) QApplication instance per application.
-    # There is one QApplication instance in "qasync" already.
-    app = qasync.QApplication.instance()
-    if hasattr(app, "aboutToQuit"):
-        getattr(app, "aboutToQuit").connect(
-            functools.partial(cancel_future, future, loop)
-        )
-
-    app.setApplicationName("Hexapod EUI")
-
-    # Set the parser
     parser = QCommandLineParser()
     parser.setApplicationDescription("Run the hexapod graphical user interface (GUI).")
     parser.addHelpOption()
 
     parser.addPositionalArgument("hexapod", "1: camera hexapod, 2: M2 hexapod.")
 
-    option_verbose = QCommandLineOption(
-        ["v", "verbose"], "Print log messages to terminal."
-    )
+    option_verbose = QCommandLineOption(["v", "verbose"], "Print log messages to terminal.")
     parser.addOption(option_verbose)
 
-    option_simulation = QCommandLineOption(
-        ["s", "simulation"], "Run the simulation mode."
-    )
+    option_simulation = QCommandLineOption(["s", "simulation"], "Run the simulation mode.")
     parser.addOption(option_simulation)
 
     option_log_level = QCommandLineOption(
@@ -88,21 +70,42 @@ async def main(argv: list) -> bool:
     )
     parser.addOption(option_log_level)
 
-    option_no_log_file = QCommandLineOption(
-        ["no-logfile"], "Do not write log messages to file."
-    )
+    option_no_log_file = QCommandLineOption(["no-logfile"], "Do not write log messages to file.")
     parser.addOption(option_no_log_file)
 
-    parser.process(app)
+    return parser, [
+        option_verbose,
+        option_simulation,
+        option_log_level,
+        option_no_log_file,
+    ]
+
+
+async def main(
+    parser: QCommandLineParser,
+    options: list[QCommandLineOption],
+    app_close_event: asyncio.Event,
+) -> None:
+    """Main application.
+
+    Parameters
+    ----------
+    parser : `PySide6.QtCore.QCommandLineParser`
+        Command line parser.
+    options : `list` [`PySide6.QtCore.QCommandLineOption`]
+        List of command line options.
+    app_close_event : `asyncio.Event`
+        Event to be set when the application is closing.
+    """
 
     # Get the argument and check the values
     args = parser.positionalArguments()
     check_arguments(args)
 
-    is_output_log_to_file = not parser.isSet(option_no_log_file)
-    is_verbose = parser.isSet(option_verbose)
-    is_simulation_mode = parser.isSet(option_simulation)
-    log_level = int(parser.value(option_log_level))
+    is_verbose = parser.isSet(options[0])
+    is_simulation_mode = parser.isSet(options[1])
+    log_level = int(parser.value(options[2]))
+    is_output_log_to_file = not parser.isSet(options[3])
 
     # Create a Qt main window, which will be our window.
     window_main = MainWindow(
@@ -114,11 +117,7 @@ async def main(argv: list) -> bool:
     )
     window_main.show()
 
-    await future
-
-    # Your application won't reach here until you exit and the event
-    # loop has stopped.
-    return True
+    await app_close_event.wait()
 
 
 def check_arguments(args: list) -> None:
@@ -142,22 +141,3 @@ def check_arguments(args: list) -> None:
 
     if args[0] not in ["1", "2"]:
         raise ValueError("The argument must be 1 or 2.")
-
-
-def cancel_future(future: asyncio.Future, loop: asyncio.AbstractEventLoop) -> None:
-    """Cancel the future.
-
-    This is needed to ensure that all pre- and post-processing for the event
-    loop is done. See the source code in qasync library for the details.
-
-    Parameters
-    ----------
-    future : `asyncio.Future`
-        Future.
-    loop : `asyncio.unix_events._UnixSelectorEventLoop`
-        Event loop.
-    """
-
-    loop.call_later(10, future.cancel)
-    if not future.cancelled():
-        future.cancel()

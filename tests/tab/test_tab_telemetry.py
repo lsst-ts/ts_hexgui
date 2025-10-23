@@ -33,22 +33,18 @@ from pytestqt.qtbot import QtBot
 
 @pytest.fixture
 def widget(qtbot: QtBot) -> TabTelemetry:
-    widget = TabTelemetry(
-        "Telemetry", Model(logging.getLogger(), MTHexapod.SalIndex.CAMERA_HEXAPOD)
-    )
+    widget = TabTelemetry("Telemetry", Model(logging.getLogger(), MTHexapod.SalIndex.CAMERA_HEXAPOD))
     qtbot.addWidget(widget)
 
     return widget
 
 
 def test_init(widget: TabTelemetry) -> None:
-
     assert len(widget._application_status) == 15
 
 
 @pytest.mark.asyncio
 async def test_set_signal_application_status(widget: TabTelemetry) -> None:
-
     widget.model.report_application_status(0xFFFF)
 
     # Sleep so the event loop can access CPU to handle the signal
@@ -63,7 +59,6 @@ async def test_set_signal_application_status(widget: TabTelemetry) -> None:
 
 @pytest.mark.asyncio
 async def test_set_signal_control(widget: TabTelemetry) -> None:
-
     widget.model.report_control_data(
         [1.1, 2.2, 3.3, 4.4, 5.5, 6.6],
         [7.7, 8.8, 9.9, 10.0, 11.1, 12.2],
@@ -87,14 +82,11 @@ async def test_set_signal_control(widget: TabTelemetry) -> None:
     assert widget._telemetry_strut["command_position_4"].text() == "11.100 um"
     assert widget._telemetry_strut["command_position_5"].text() == "12.200 um"
 
-    assert (
-        widget._telemetry_position["time_frame_difference"].text() == "13.3000000 sec"
-    )
+    assert widget._telemetry_position["time_frame_difference"].text() == "13.3000000 sec"
 
 
 @pytest.mark.asyncio
 async def test_set_signal_position(widget: TabTelemetry) -> None:
-
     widget.model.report_position(
         [1.1, 2.2, 3.3, 4.4, 5.5, 6.6],
         [7.7, 8.8, 9.9, 10.0, 11.1, 12.2],
@@ -126,15 +118,11 @@ async def test_set_signal_position(widget: TabTelemetry) -> None:
     assert widget._telemetry_position["position_ry"].text() == "17.7000000 deg"
     assert widget._telemetry_position["position_rz"].text() == "18.8000000 deg"
 
-    assert (
-        widget._telemetry_position["in_motion"].text()
-        == "<font color='green'>True</font>"
-    )
+    assert widget._telemetry_position["in_motion"].text() == "<font color='green'>True</font>"
 
 
 @pytest.mark.asyncio
 async def test_set_signal_power(widget: TabTelemetry) -> None:
-
     widget.model.report_power([1.1, 2.2, 3.3, 4.4, 5.5, 6.6], [7.7, 8.8, 9.9])
 
     # Sleep so the event loop can access CPU to handle the signal

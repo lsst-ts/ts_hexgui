@@ -33,16 +33,13 @@ from pytestqt.qtbot import QtBot
 
 @pytest.fixture
 def widget(qtbot: QtBot) -> TabDriveStatus:
-    widget = TabDriveStatus(
-        "Drive Status", Model(logging.getLogger(), MTHexapod.SalIndex.CAMERA_HEXAPOD)
-    )
+    widget = TabDriveStatus("Drive Status", Model(logging.getLogger(), MTHexapod.SalIndex.CAMERA_HEXAPOD))
     qtbot.addWidget(widget)
 
     return widget
 
 
 def test_init(widget: TabDriveStatus) -> None:
-
     assert len(widget._list_status_word["strut_0"]) == 16
     assert len(widget._list_latching_fault_status["strut_0"]) == 16
     assert len(widget._list_copley_status["strut_0"]) == 32
@@ -51,7 +48,6 @@ def test_init(widget: TabDriveStatus) -> None:
 
 @pytest.mark.asyncio
 async def test_set_signal_drive(widget: TabDriveStatus) -> None:
-
     # Triggered
     widget.model.report_drive_status(
         [0xFFFF] * NUM_STRUT,
@@ -94,19 +90,12 @@ async def test_set_signal_drive(widget: TabDriveStatus) -> None:
                 assert indicator.palette().color(QPalette.Base) == Qt.green
 
     # Not triggered
-    widget.model.report_drive_status(
-        [0] * NUM_STRUT, [0] * NUM_STRUT, [0] * NUM_STRUT, [0] * NUM_DRIVE
-    )
+    widget.model.report_drive_status([0] * NUM_STRUT, [0] * NUM_STRUT, [0] * NUM_STRUT, [0] * NUM_DRIVE)
 
     # Sleep so the event loop can access CPU to handle the signal
     await asyncio.sleep(1)
 
     for strut in struts:
-        assert (
-            widget._list_status_word[strut][5].palette().color(QPalette.Base) == Qt.red
-        )
+        assert widget._list_status_word[strut][5].palette().color(QPalette.Base) == Qt.red
 
-        assert (
-            widget._list_input_pin_state[strut][0].palette().color(QPalette.Base)
-            == Qt.red
-        )
+        assert widget._list_input_pin_state[strut][0].palette().color(QPalette.Base) == Qt.red

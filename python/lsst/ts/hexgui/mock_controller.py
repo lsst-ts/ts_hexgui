@@ -89,7 +89,6 @@ class MockController(BaseMockController):
         port: int = 0,
         initial_state: MTHexapod.ControllerState = MTHexapod.ControllerState.STANDBY,
     ) -> None:
-
         extra_commands = {
             (
                 CommandCode.SET_ENABLED_SUBSTATE,
@@ -213,16 +212,12 @@ class MockController(BaseMockController):
             raise RuntimeError("Must set the position or offset first.")
 
         self.telemetry.commanded_pos = tuple(self._commanded_position)
-        self.telemetry.strut_commanded_final_pos = (
-            self._hexapod_position_to_strut_position(self._commanded_position)
+        self.telemetry.strut_commanded_final_pos = self._hexapod_position_to_strut_position(
+            self._commanded_position
         )
-        self.telemetry.strut_commanded_accel = (
-            self.config.acceleration_strut,
-        ) * NUM_STRUT
+        self.telemetry.strut_commanded_accel = (self.config.acceleration_strut,) * NUM_STRUT
 
-        self.telemetry.enabled_substate = (
-            MTHexapod.EnabledSubstate.MOVING_POINT_TO_POINT
-        )
+        self.telemetry.enabled_substate = MTHexapod.EnabledSubstate.MOVING_POINT_TO_POINT
 
     def _hexapod_position_to_strut_position(
         self,
@@ -303,15 +298,9 @@ class MockController(BaseMockController):
 
         self.assert_stationary()
 
-        current_positions = list(self.telemetry.measured_xyz) + list(
-            self.telemetry.measured_uvw
-        )
-        offsets = [
-            getattr(command, f"param{idx + 1}") for idx in range(NUM_DEGREE_OF_FREEDOM)
-        ]
-        self._commanded_position = [
-            position + offset for position, offset in zip(current_positions, offsets)
-        ]
+        current_positions = list(self.telemetry.measured_xyz) + list(self.telemetry.measured_uvw)
+        offsets = [getattr(command, f"param{idx + 1}") for idx in range(NUM_DEGREE_OF_FREEDOM)]
+        self._commanded_position = [position + offset for position, offset in zip(current_positions, offsets)]
 
     async def do_set_raw_strut(self, command: Command) -> None:
         """Set the raw strut position.
@@ -431,10 +420,7 @@ class MockController(BaseMockController):
         )
         await self.write_config()
 
-    async def end_run_command(
-        self, command: Command, cmd_method: typing.Coroutine
-    ) -> None:
-
+    async def end_run_command(self, command: Command, cmd_method: typing.Coroutine) -> None:
         if cmd_method not in (self.do_position_set, self.do_position_offset):
             self._commanded_position = None
 
@@ -447,34 +433,24 @@ class MockController(BaseMockController):
             self.telemetry.copley_fault_status_register = (0xF000,) * NUM_STRUT
 
             self.telemetry.status_word = (
-                (0x631,) * NUM_STRUT
-                if self.config.drives_enabled
-                else (0x670,) * NUM_STRUT
+                (0x631,) * NUM_STRUT if self.config.drives_enabled else (0x670,) * NUM_STRUT
             )
 
             # Application status
             self.telemetry.application_status = (
-                MTHexapod.ApplicationStatus.EUI_CONNECTED
-                | MTHexapod.ApplicationStatus.SYNC_MODE
+                MTHexapod.ApplicationStatus.EUI_CONNECTED | MTHexapod.ApplicationStatus.SYNC_MODE
             )
             if self._is_csc_commander:
-                self.telemetry.application_status |= (
-                    MTHexapod.ApplicationStatus.DDS_COMMAND_SOURCE
-                )
+                self.telemetry.application_status |= MTHexapod.ApplicationStatus.DDS_COMMAND_SOURCE
 
             # Power
             self.telemetry.motor_current = (
-                (self.STRUT_CURRENT,) * NUM_STRUT
-                if self.config.drives_enabled
-                else (0.0,) * NUM_STRUT
+                (self.STRUT_CURRENT,) * NUM_STRUT if self.config.drives_enabled else (0.0,) * NUM_STRUT
             )
             self.telemetry.bus_voltage = (self.BUS_VOLTAGE,) * NUM_DRIVE
 
             # Hexapod and strut positions
-            if (
-                self.telemetry.enabled_substate
-                == MTHexapod.EnabledSubstate.MOVING_POINT_TO_POINT
-            ):
+            if self.telemetry.enabled_substate == MTHexapod.EnabledSubstate.MOVING_POINT_TO_POINT:
                 # Do the movement
                 is_done_x, new_x = self._move_position(
                     self.telemetry.measured_xyz[0],
@@ -520,31 +496,18 @@ class MockController(BaseMockController):
 
                 M_TO_UM = 1e6
                 for idx, strut_position in enumerate(strut_positions):
-                    self.telemetry.estimated_posfiltvel[idx].pos = (
-                        strut_position * M_TO_UM
-                    )
+                    self.telemetry.estimated_posfiltvel[idx].pos = strut_position * M_TO_UM
 
                 # Change the substate if the movement is done
-                if (
-                    is_done_x
-                    and is_done_y
-                    and is_done_z
-                    and is_done_u
-                    and is_done_v
-                    and is_done_w
-                ):
-                    self.telemetry.enabled_substate = (
-                        MTHexapod.EnabledSubstate.STATIONARY
-                    )
+                if is_done_x and is_done_y and is_done_z and is_done_u and is_done_v and is_done_w:
+                    self.telemetry.enabled_substate = MTHexapod.EnabledSubstate.STATIONARY
 
                     self._commanded_position = None
                 # Update the Copley drive status word
                 else:
                     status_word_current = tuple(self.telemetry.status_word)
                     # 0x4000 is bit 14 (Amplifier move status)
-                    self.telemetry.status_word = tuple(
-                        word | 0x4000 for word in status_word_current
-                    )
+                    self.telemetry.status_word = tuple(word | 0x4000 for word in status_word_current)
 
         except Exception:
             self.log.exception("update_telemetry failed; output incomplete telemetry")

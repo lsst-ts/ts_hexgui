@@ -59,7 +59,6 @@ def widget(qtbot: QtBot) -> ControlPanel:
 
 
 def test_init(widget: ControlPanel) -> None:
-
     assert widget._command_parameters["position_x"].maximum() == CAM_XY_MAX_MIC
     assert widget._command_parameters["position_x"].minimum() == -CAM_XY_MAX_MIC
 
@@ -79,14 +78,8 @@ def test_init(widget: ControlPanel) -> None:
     assert widget._command_parameters["position_rz"].minimum() == CAM_W_MIN_DEG
 
     for idx in range(NUM_STRUT):
-        assert (
-            widget._command_parameters[f"strut_{idx}"].maximum()
-            == MAX_ACTUATOR_RANGE_MIC
-        )
-        assert (
-            widget._command_parameters[f"strut_{idx}"].minimum()
-            == -MAX_ACTUATOR_RANGE_MIC
-        )
+        assert widget._command_parameters[f"strut_{idx}"].maximum() == MAX_ACTUATOR_RANGE_MIC
+        assert widget._command_parameters[f"strut_{idx}"].minimum() == -MAX_ACTUATOR_RANGE_MIC
 
     assert widget._command_parameters["pivot_x"].maximum() == MAX_PIVOT_X_MIC
     assert widget._command_parameters["pivot_x"].minimum() == -MAX_PIVOT_X_MIC
@@ -97,30 +90,17 @@ def test_init(widget: ControlPanel) -> None:
     assert widget._command_parameters["pivot_z"].maximum() == MAX_PIVOT_Z_MIC
     assert widget._command_parameters["pivot_z"].minimum() == -MAX_PIVOT_Z_MIC
 
-    assert (
-        widget._command_parameters["linear_velocity_xy"].maximum()
-        == MAX_LINEAR_VEL_LIMIT
-    )
-    assert (
-        widget._command_parameters["linear_velocity_z"].maximum()
-        == MAX_LINEAR_VEL_LIMIT
-    )
+    assert widget._command_parameters["linear_velocity_xy"].maximum() == MAX_LINEAR_VEL_LIMIT
+    assert widget._command_parameters["linear_velocity_z"].maximum() == MAX_LINEAR_VEL_LIMIT
 
-    assert (
-        widget._command_parameters["angular_velocity_rxry"].maximum()
-        == MAX_ANGULAR_VEL_LIMIT
-    )
-    assert (
-        widget._command_parameters["angular_velocity_rz"].maximum()
-        == MAX_ANGULAR_VEL_LIMIT
-    )
+    assert widget._command_parameters["angular_velocity_rxry"].maximum() == MAX_ANGULAR_VEL_LIMIT
+    assert widget._command_parameters["angular_velocity_rz"].maximum() == MAX_ANGULAR_VEL_LIMIT
 
     assert widget._command_parameters["acceleration"].maximum() == MAX_ACCEL_LIMIT
 
 
 @pytest.mark.asyncio
 async def test_callback_command(qtbot: QtBot, widget: ControlPanel) -> None:
-
     # Single command parameter
     qtbot.mouseClick(widget._commands["enabled_substate"], Qt.LeftButton)
 
@@ -148,12 +128,10 @@ async def test_callback_command(qtbot: QtBot, widget: ControlPanel) -> None:
 
 @pytest.mark.asyncio
 async def test_check_dangerous_commands(widget: ControlPanel) -> None:
-
     assert await widget._check_dangerous_commands() is False
 
 
 def test_get_selected_command(widget: ControlPanel) -> None:
-
     for name, command in widget._commands.items():
         command.setChecked(True)
 
@@ -161,7 +139,6 @@ def test_get_selected_command(widget: ControlPanel) -> None:
 
 
 def test_get_motion_pattern(widget: ControlPanel) -> None:
-
     assert widget._get_motion_pattern() == MotionPattern.Sync
 
     widget._command_parameters["motion_pattern"].setCurrentIndex(1)
@@ -169,7 +146,6 @@ def test_get_motion_pattern(widget: ControlPanel) -> None:
 
 
 def test_update_fault_status(widget: ControlPanel) -> None:
-
     widget._update_fault_status(True)
     assert widget._indicators["fault"].text() == "Faulted"
     assert widget._indicators["fault"].palette().color(QPalette.Button) == Qt.red
@@ -181,7 +157,6 @@ def test_update_fault_status(widget: ControlPanel) -> None:
 
 @pytest.mark.asyncio
 async def test_set_signal_state(widget: ControlPanel) -> None:
-
     command_source = CommandSource.CSC
     state = MTHexapod.ControllerState.FAULT
     enabled_substate = MTHexapod.EnabledSubstate.MOVING_POINT_TO_POINT
@@ -201,7 +176,6 @@ async def test_set_signal_state(widget: ControlPanel) -> None:
 
 @pytest.mark.asyncio
 async def test_set_signal_config(widget: ControlPanel) -> None:
-
     config = Config()
     for idx in range(3):
         config.pivot[idx] = float(idx + 1)
@@ -232,7 +206,6 @@ async def test_set_signal_config(widget: ControlPanel) -> None:
 
 
 def test_update_drive_status(widget: ControlPanel) -> None:
-
     widget._update_drive_status(True)
     assert widget._indicators["drive"].text() == "On"
     assert widget._indicators["drive"].palette().color(QPalette.Button) == Qt.green

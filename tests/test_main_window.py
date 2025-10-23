@@ -32,9 +32,7 @@ from pytestqt.qtbot import QtBot
 
 @pytest.fixture
 def widget(qtbot: QtBot) -> MainWindow:
-    widget = MainWindow(
-        False, False, MTHexapod.SalIndex.CAMERA_HEXAPOD, False, log_level=13
-    )
+    widget = MainWindow(False, False, MTHexapod.SalIndex.CAMERA_HEXAPOD, False, log_level=13)
     qtbot.addWidget(widget)
 
     return widget
@@ -52,10 +50,7 @@ def test_init(widget: MainWindow) -> None:
     configuration = _get_config()
     assert connection_information["host"] == configuration["camera_config"]["host"]
     assert connection_information["port"] == configuration["camera_config"]["port"]
-    assert (
-        connection_information["timeout_connection"]
-        == configuration["connection_timeout"]
-    )
+    assert connection_information["timeout_connection"] == configuration["connection_timeout"]
 
 
 def _get_config() -> dict:

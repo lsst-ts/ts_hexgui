@@ -23,6 +23,10 @@ import asyncio
 import logging
 
 import pytest
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QPalette
+from pytestqt.qtbot import QtBot
+
 from lsst.ts.hexgui import (
     CAM_UV_MAX_DEG,
     CAM_W_MAX_DEG,
@@ -45,9 +49,6 @@ from lsst.ts.hexgui import (
     MotionPattern,
 )
 from lsst.ts.xml.enums import MTHexapod
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QPalette
-from pytestqt.qtbot import QtBot
 
 
 @pytest.fixture

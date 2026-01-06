@@ -21,13 +21,6 @@
 
 __all__ = ["TabTelemetry"]
 
-from lsst.ts.guitool import (
-    TabTemplate,
-    create_group_box,
-    create_label,
-    create_radio_indicators,
-    update_boolean_indicator_status,
-)
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QFormLayout,
@@ -37,6 +30,14 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 from qasync import asyncSlot
+
+from lsst.ts.guitool import (
+    TabTemplate,
+    create_group_box,
+    create_label,
+    create_radio_indicators,
+    update_boolean_indicator_status,
+)
 
 from ..constants import NUM_STRUT
 from ..model import Model

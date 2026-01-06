@@ -21,14 +21,6 @@
 
 __all__ = ["TabDriveStatus"]
 
-from lsst.ts.guitool import (
-    ButtonStatus,
-    TabTemplate,
-    create_group_box,
-    create_radio_indicators,
-    update_boolean_indicator_status,
-    update_button_color,
-)
 from PySide6.QtGui import QPalette
 from PySide6.QtWidgets import (
     QFormLayout,
@@ -40,6 +32,15 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 from qasync import asyncSlot
+
+from lsst.ts.guitool import (
+    ButtonStatus,
+    TabTemplate,
+    create_group_box,
+    create_radio_indicators,
+    update_boolean_indicator_status,
+    update_button_color,
+)
 
 from ..constants import NUM_STRUT
 from ..model import Model

@@ -22,12 +22,13 @@
 import asyncio
 
 import pytest
-from lsst.ts.guitool import get_config_dir, read_yaml_file
-from lsst.ts.hexgui import MainWindow
-from lsst.ts.xml.enums import MTHexapod
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QToolBar
 from pytestqt.qtbot import QtBot
+
+from lsst.ts.guitool import get_config_dir, read_yaml_file
+from lsst.ts.hexgui import MainWindow
+from lsst.ts.xml.enums import MTHexapod
 
 
 @pytest.fixture

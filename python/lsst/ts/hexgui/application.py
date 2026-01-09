@@ -23,9 +23,10 @@ __all__ = ["run_hexgui", "check_arguments"]
 
 import asyncio
 
+from PySide6.QtCore import QCommandLineOption, QCommandLineParser
+
 from lsst.ts.guitool import base_frame_run_application
 from lsst.ts.xml.enums import MTHexapod
-from PySide6.QtCore import QCommandLineOption, QCommandLineParser
 
 from .main_window import MainWindow
 

@@ -6,6 +6,15 @@
 Version History
 ##################
 
+.. _lsst.ts.hexgui-0.5.4:
+
+-------------
+0.5.4
+-------------
+
+* Fix the ruff format.
+* Add the **documenteer.toml**.
+
 .. _lsst.ts.hexgui-0.5.3:
 
 -------------

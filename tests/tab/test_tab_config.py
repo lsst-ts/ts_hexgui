@@ -23,10 +23,11 @@ import asyncio
 import logging
 
 import pytest
+from pytestqt.qtbot import QtBot
+
 from lsst.ts.hexgui import Config, Model
 from lsst.ts.hexgui.tab import TabConfig
 from lsst.ts.xml.enums import MTHexapod
-from pytestqt.qtbot import QtBot
 
 
 @pytest.fixture

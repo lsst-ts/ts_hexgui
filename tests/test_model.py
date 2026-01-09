@@ -24,6 +24,8 @@ import logging
 
 import pytest
 import pytest_asyncio
+from pytestqt.qtbot import QtBot
+
 from lsst.ts import salobj
 from lsst.ts.hexgui import (
     CAM_UV_MAX_DEG,
@@ -44,7 +46,6 @@ from lsst.ts.hexgui import (
     TriggerState,
 )
 from lsst.ts.xml.enums import MTHexapod
-from pytestqt.qtbot import QtBot
 
 TIMEOUT = 1000
 

@@ -23,12 +23,13 @@ import asyncio
 import logging
 
 import pytest
-from lsst.ts.hexgui import Model
-from lsst.ts.hexgui.tab import TabTelemetry
-from lsst.ts.xml.enums import MTHexapod
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPalette
 from pytestqt.qtbot import QtBot
+
+from lsst.ts.hexgui import Model
+from lsst.ts.hexgui.tab import TabTelemetry
+from lsst.ts.xml.enums import MTHexapod
 
 
 @pytest.fixture

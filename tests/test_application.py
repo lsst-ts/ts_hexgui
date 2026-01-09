@@ -23,6 +23,7 @@ import asyncio
 import shutil
 
 import pytest
+
 from lsst.ts.hexgui.application import check_arguments
 
 

@@ -26,10 +26,11 @@ import logging
 import types
 import typing
 
+from PySide6.QtCore import Signal
+
 from lsst.ts.hexrotcomm import Command, CommandTelemetryClient
 from lsst.ts.tcpip import LOCALHOST_IPV4
 from lsst.ts.xml.enums import MTHexapod
-from PySide6.QtCore import Signal
 
 from .constants import NUM_DEGREE_OF_FREEDOM, NUM_DRIVE, NUM_STRUT
 from .enums import (

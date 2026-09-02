@@ -6,6 +6,14 @@
 Version History
 ##################
 
+.. _lsst.ts.hexgui-0.5.5:
+
+-------------
+0.5.5
+-------------
+
+* Add and update the license header.
+
 .. _lsst.ts.hexgui-0.5.4:
 
 -------------

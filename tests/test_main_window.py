@@ -22,6 +22,7 @@
 import asyncio
 
 import pytest
+import pytest_asyncio
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QToolBar
 from pytestqt.qtbot import QtBot
@@ -31,7 +32,7 @@ from lsst.ts.hexgui import MainWindow
 from lsst.ts.xml.enums import MTHexapod
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 def widget(qtbot: QtBot) -> MainWindow:
     widget = MainWindow(False, False, MTHexapod.SalIndex.CAMERA_HEXAPOD, False, log_level=13)
     qtbot.addWidget(widget)

@@ -6,6 +6,14 @@
 Version History
 ##################
 
+.. _lsst.ts.hexgui-0.5.6:
+
+-------------
+0.5.6
+-------------
+
+* Workaround the issue of the Qt and asyncio event loops in Python 3.14.
+
 .. _lsst.ts.hexgui-0.5.5:
 
 -------------

@@ -6,6 +6,14 @@
 Version History
 ##################
 
+.. _lsst.ts.hexgui-0.5.7:
+
+-------------
+0.5.7
+-------------
+
+* Add the ``local_scheme="no-local-version"`` to the **setup.py**.
+
 .. _lsst.ts.hexgui-0.5.6:
 
 -------------

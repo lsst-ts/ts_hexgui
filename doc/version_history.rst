@@ -6,6 +6,14 @@
 Version History
 ##################
 
+.. _lsst.ts.hexgui-0.5.8:
+
+-------------
+0.5.8
+-------------
+
+* Fix the unit tests from the ``qasync`` 0.29.0a1 version and remove the workaround.
+
 .. _lsst.ts.hexgui-0.5.7:
 
 -------------

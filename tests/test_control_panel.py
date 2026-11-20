@@ -53,7 +53,7 @@ from lsst.ts.xml.enums import MTHexapod
 
 
 @pytest_asyncio.fixture
-def widget(qtbot: QtBot) -> ControlPanel:
+async def widget(qtbot: QtBot) -> ControlPanel:
     widget = ControlPanel(Model(logging.getLogger(), MTHexapod.SalIndex.CAMERA_HEXAPOD))
     qtbot.addWidget(widget)
 
@@ -133,7 +133,8 @@ async def test_check_dangerous_commands(widget: ControlPanel) -> None:
     assert await widget._check_dangerous_commands() is False
 
 
-def test_get_selected_command(widget: ControlPanel) -> None:
+@pytest.mark.asyncio
+async def test_get_selected_command(widget: ControlPanel) -> None:
     for name, command in widget._commands.items():
         command.setChecked(True)
 

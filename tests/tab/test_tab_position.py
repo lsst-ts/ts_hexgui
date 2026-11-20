@@ -35,6 +35,9 @@ def widget(qtbot: QtBot) -> TabPosition:
     widget = TabPosition("Position", Model(logging.getLogger(), MTHexapod.SalIndex.CAMERA_HEXAPOD))
     qtbot.addWidget(widget)
 
+    # Qt processes the pending timeouts outside the asyncio loop after a test
+    widget._timer.stop()
+
     return widget
 
 
@@ -43,7 +46,8 @@ async def test_callback_time_out(widget: TabPosition) -> None:
     widget._strut_lengths = list(range(1, NUM_STRUT + 1))
     widget._positions = [10.0, 20.0, 30.0, 40.0, 50.0, 60.0]
 
-    await widget._callback_time_out()
+    widget._callback_time_out()
+    await asyncio.sleep(1)
 
     for idx, strut_length in enumerate(widget._strut_lengths):
         assert widget._figures["length"].get_points(idx)[-1].y() == strut_length

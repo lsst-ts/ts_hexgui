@@ -35,6 +35,9 @@ def widget(qtbot: QtBot) -> TabPower:
     widget = TabPower("Power", Model(logging.getLogger(), MTHexapod.SalIndex.CAMERA_HEXAPOD))
     qtbot.addWidget(widget)
 
+    # Qt processes the pending timeouts outside the asyncio loop after a test
+    widget._timer.stop()
+
     return widget
 
 
@@ -43,7 +46,8 @@ async def test_callback_time_out(widget: TabPower) -> None:
     widget._currents = list(range(1, NUM_STRUT + 1))
     widget._voltages = list(range(10, NUM_DRIVE + 10))
 
-    await widget._callback_time_out()
+    widget._callback_time_out()
+    await asyncio.sleep(1)
 
     for idx in range(NUM_STRUT):
         assert widget._figures["current"].get_points(idx)[-1].y() == widget._currents[idx]
